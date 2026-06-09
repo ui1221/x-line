@@ -54,15 +54,35 @@ button {
 }
 
 .screen-title {
+  position: relative;
   flex-direction: column;
   justify-content: center;
-  gap: 30px;
-  max-width: 540px;
+  gap: 26px;
+  width: min(100%, 440px);
+  max-width: 440px;
   margin: 0 auto;
+  padding: 18px 4px;
 }
 
 .brand-block {
-  max-width: 520px;
+  max-width: 380px;
+}
+
+.screen-title .brand-block {
+  display: grid;
+  gap: 12px;
+}
+
+.screen-title .kicker {
+  width: fit-content;
+  padding: 7px 10px;
+  border: 1px solid rgba(222, 249, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(7, 24, 39, 0.34);
+  color: #d9f8ff;
+  font-size: 0.68rem;
+  font-weight: 850;
+  text-shadow: none;
 }
 
 .kicker,
@@ -78,25 +98,27 @@ button {
 }
 
 h1 {
-  margin: 8px 0 10px;
-  color: #fff7df;
-  font-size: clamp(4.6rem, 20vw, 8rem);
-  line-height: 0.86;
+  margin: 0;
+  color: #f1fdff;
+  font-size: clamp(3.7rem, 17vw, 6.4rem);
+  line-height: 0.9;
+  font-weight: 950;
   letter-spacing: 0;
-  text-shadow: 0 5px 0 #1c1138, 0 14px 28px rgba(0, 0, 0, 0.28);
+  text-shadow: 0 3px 0 rgba(4, 16, 26, 0.8), 0 18px 36px rgba(0, 0, 0, 0.24);
 }
 
 .tagline {
-  max-width: 20rem;
+  max-width: 19rem;
   margin: 0;
-  color: #d7f4ff;
-  line-height: 1.65;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+  color: #d9f8ff;
+  font-size: 0.98rem;
+  line-height: 1.75;
+  text-shadow: none;
 }
 
 .mode-grid {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .mode-button,
@@ -123,6 +145,47 @@ h1 {
   display: block;
   margin-top: 4px;
   color: #b9e9f3;
+}
+
+.screen-title .mode-button {
+  position: relative;
+  min-height: 72px;
+  padding: 14px 16px 14px 52px;
+  border: 1px solid rgba(221, 246, 255, 0.24);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06)),
+    rgba(7, 24, 39, 0.48);
+  box-shadow: 0 12px 26px rgba(4, 16, 26, 0.22);
+  text-align: left;
+}
+
+.screen-title .mode-button::before {
+  content: "";
+  position: absolute;
+  top: 19px;
+  left: 17px;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(217, 248, 255, 0.72);
+  border-radius: 6px;
+  background: linear-gradient(135deg, #53d7d2, #f6d85a);
+  box-shadow: 0 0 18px rgba(83, 215, 210, 0.28);
+}
+
+.screen-title .mode-button:active {
+  transform: translateY(1px);
+}
+
+.screen-title .mode-button span {
+  color: #f7feff;
+  font-size: 1.08rem;
+  font-weight: 900;
+}
+
+.screen-title .mode-button small {
+  color: #c2e9f0;
+  font-size: 0.82rem;
 }
 
 .screen-game {

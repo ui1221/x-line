@@ -1,7 +1,7 @@
 {
-  "name": "LINES",
-  "short_name": "LINES",
-  "description": "A mobile falling puzzle prototype.",
+  "name": "X-LINE",
+  "short_name": "X-LINE",
+  "description": "A calm mobile falling puzzle prototype.",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#101820",
