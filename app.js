@@ -62,8 +62,9 @@ const achievementImages = {
 const achievementStorageKey = "x-line-achievements-v1";
 const playDayAchievementTiers = [1, 3, 7, 15, 30, 60, 77, 100];
 const modePlayAchievementTiers = [1, 3, 5, 10, 20, 30, 40, 50];
-const totalLineAchievementTiers = [1, 10, 25, 50, 100, 250, 500, 999];
+const totalLineAchievementTiers = [1, 10, 25, 50, 100, 250, 500, 1000, 2000, 3000, 5000, 7500, 9999];
 const cleanupLineAchievementTiers = [1, 10, 25, 50, 100, 150, 200, 300];
+const blastGaugeAchievementTiers = [1, 3, 5, 10, 20, 30, 50, 75, 100];
 const playtimeSaveIntervalMs = 5000;
 
 const cols = 10;
@@ -326,6 +327,16 @@ function buildAchievements() {
       image: achievementImages.cleanup,
       badge: String(tier),
     })),
+    ...blastGaugeAchievementTiers.map((tier) => ({
+      id: `blast_gauge_${tier}`,
+      icon: "B",
+      title: `Blast x${tier}`,
+      description: `Blast gaugeを${tier}回ためる`,
+      metric: "blastGaugeFills",
+      target: tier,
+      image: modeAchievementLabels.blast.image,
+      badge: String(tier),
+    })),
     {
       id: "no_clear_game_over",
       icon: "0",
@@ -362,6 +373,7 @@ function defaultAchievementState() {
     playDates: [],
     totalLines: 0,
     cleanupLines: 0,
+    blastGaugeFills: 0,
     totalPlayMs: 0,
     dailyPlayMs: {},
     modePlays: Object.fromEntries(Object.keys(modes).map((modeKey) => [modeKey, 0])),
@@ -379,6 +391,7 @@ function loadAchievementState() {
       ...fallback,
       ...saved,
       playDates: Array.isArray(saved.playDates) ? saved.playDates : fallback.playDates,
+      blastGaugeFills: Number(saved.blastGaugeFills) || 0,
       totalPlayMs: Number(saved.totalPlayMs) || 0,
       dailyPlayMs: saved.dailyPlayMs || fallback.dailyPlayMs,
       modePlays: { ...fallback.modePlays, ...(saved.modePlays || {}) },
@@ -427,6 +440,7 @@ function achievementProgress(definition) {
   if (definition.metric === "playDays") return achievementState.playDates.length;
   if (definition.metric === "totalLines") return achievementState.totalLines;
   if (definition.metric === "cleanupLines") return achievementState.cleanupLines;
+  if (definition.metric === "blastGaugeFills") return achievementState.blastGaugeFills;
   if (definition.metric === "modePlays") return achievementState.modePlays[definition.modeKey] || 0;
   if (definition.metric === "noClearGameOvers") return achievementState.noClearGameOvers;
   return 0;
@@ -463,6 +477,12 @@ function recordGameStart(modeKey) {
 function recordLineClear(clearedRows, cleanupLineCount) {
   achievementState.totalLines += clearedRows.length;
   achievementState.cleanupLines += cleanupLineCount;
+  saveAchievementState();
+  checkAchievements();
+}
+
+function recordBlastGaugeFill() {
+  achievementState.blastGaugeFills += 1;
   saveAchievementState();
   checkAchievements();
 }
@@ -715,6 +735,7 @@ function blastBottomRows() {
 
 function triggerBlastEffect() {
   if (!currentMode().blast) return;
+  recordBlastGaugeFill();
   blastCharge = 0;
   updateBlastGauge();
 
