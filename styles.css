@@ -647,6 +647,50 @@ h1 {
   color: #06131d;
 }
 
+.achievement-icon.has-image {
+  position: relative;
+  width: min(88%, 50px);
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(7, 24, 39, 0), rgba(7, 24, 39, 0.18)),
+    var(--achievement-image);
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.26);
+}
+
+.achievement-card:not(.is-unlocked) .achievement-icon.has-image {
+  filter: saturate(0.45) brightness(0.62);
+}
+
+.achievement-card.is-unlocked .achievement-icon.has-image {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(246, 216, 90, 0.1)),
+    var(--achievement-image);
+  background-size: cover;
+  background-position: center;
+}
+
+.achievement-badge {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  min-width: 19px;
+  max-width: calc(100% - 4px);
+  padding: 2px 4px;
+  border-radius: 6px;
+  background: rgba(5, 18, 30, 0.88);
+  color: #fff1a8;
+  font-size: clamp(0.48rem, 1.8vw, 0.64rem);
+  font-weight: 950;
+  line-height: 1.1;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
 .achievement-card-title {
   position: absolute;
   width: 1px;
@@ -676,6 +720,20 @@ h1 {
   background: linear-gradient(135deg, #53d7d2, #f6d85a);
   color: #06131d;
   font-weight: 950;
+}
+
+.achievement-detail-icon.has-image {
+  align-items: end;
+  justify-items: end;
+  padding: 4px;
+  background:
+    linear-gradient(180deg, rgba(7, 24, 39, 0), rgba(7, 24, 39, 0.2)),
+    var(--achievement-image);
+  background-size: cover;
+  background-position: center;
+  color: #fff1a8;
+  font-size: 0.7rem;
+  text-shadow: 0 1px 2px #000;
 }
 
 .achievement-detail h3 {

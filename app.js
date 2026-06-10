@@ -43,10 +43,16 @@ const modes = {
 };
 
 const modeAchievementLabels = {
-  endless: { label: "Endless", icon: "E" },
-  lines200: { label: "200 Lines", icon: "200" },
-  cleanup: { label: "Clean Up", icon: "C" },
-  longLine: { label: "Long Line", icon: "L" },
+  endless: { label: "Endless", icon: "E", image: "assets/modes/endless.png" },
+  lines200: { label: "200 Lines", icon: "200", image: "assets/modes/lines200.png" },
+  cleanup: { label: "Clean Up", icon: "C", image: "assets/modes/cleanup.png" },
+  longLine: { label: "Long Line", icon: "L", image: "assets/modes/longline.png" },
+};
+const achievementImages = {
+  days: "assets/modes/endless.png",
+  lines: "assets/modes/lines200.png",
+  cleanup: "assets/modes/cleanup.png",
+  zero: "assets/modes/cleanup.png",
 };
 const achievementStorageKey = "x-line-achievements-v1";
 const playDayAchievementTiers = [1, 3, 7, 15, 30, 60, 77, 100];
@@ -285,6 +291,8 @@ function buildAchievements() {
       description: `${tier}日プレイする`,
       metric: "playDays",
       target: tier,
+      image: achievementImages.days,
+      badge: `${tier}d`,
     })),
     ...totalLineAchievementTiers.map((tier) => ({
       id: `total_lines_${tier}`,
@@ -293,6 +301,8 @@ function buildAchievements() {
       description: `合計${tier}ライン消す`,
       metric: "totalLines",
       target: tier,
+      image: achievementImages.lines,
+      badge: String(tier),
     })),
     ...cleanupLineAchievementTiers.map((tier) => ({
       id: `cleanup_lines_${tier}`,
@@ -301,6 +311,8 @@ function buildAchievements() {
       description: `お邪魔ブロックを含むラインを${tier}回消す`,
       metric: "cleanupLines",
       target: tier,
+      image: achievementImages.cleanup,
+      badge: String(tier),
     })),
     {
       id: "no_clear_game_over",
@@ -309,6 +321,8 @@ function buildAchievements() {
       description: "一度もラインを消せずにゲームオーバーになる",
       metric: "noClearGameOvers",
       target: 1,
+      image: achievementImages.zero,
+      badge: "0",
     },
   ];
 
@@ -322,6 +336,8 @@ function buildAchievements() {
         metric: "modePlays",
         modeKey,
         target: tier,
+        image: mode.image,
+        badge: String(tier),
       });
     });
   });
@@ -489,7 +505,13 @@ function renderAchievementDetail() {
 
   const acquiredAt = achievementState.unlocked[definition.id];
   const progress = Math.min(achievementProgress(definition), definition.target);
-  achievementDetailIcon.textContent = acquiredAt ? definition.icon : "?";
+  achievementDetailIcon.classList.toggle("has-image", Boolean(definition.image));
+  if (definition.image) {
+    achievementDetailIcon.style.setProperty("--achievement-image", `url("${definition.image}")`);
+  } else {
+    achievementDetailIcon.style.removeProperty("--achievement-image");
+  }
+  achievementDetailIcon.textContent = definition.badge || (acquiredAt ? definition.icon : "?");
   achievementDetailTitle.textContent = definition.title;
   achievementDetailDescription.textContent = definition.description;
   achievementDetailMeta.textContent = acquiredAt
@@ -509,8 +531,13 @@ function renderAchievements() {
     button.className = `achievement-card${unlocked ? " is-unlocked" : ""}`;
     button.type = "button";
     button.setAttribute("aria-label", definition.title);
+    if (definition.image) {
+      button.style.setProperty("--achievement-image", `url("${definition.image}")`);
+    }
     button.innerHTML = `
-      <span class="achievement-icon">${unlocked ? definition.icon : "?"}</span>
+      <span class="achievement-icon${definition.image ? " has-image" : ""}">
+        <span class="achievement-badge">${definition.badge || definition.icon}</span>
+      </span>
       <span class="achievement-card-title">${definition.title}</span>
     `;
     button.addEventListener("click", () => selectAchievement(definition.id));
