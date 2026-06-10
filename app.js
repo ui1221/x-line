@@ -18,13 +18,15 @@ const quitButton = document.querySelector("#quitButton");
 const gameOverOverlay = document.querySelector("#gameOverOverlay");
 const retryButton = document.querySelector("#retryButton");
 const gameOverMenuButton = document.querySelector("#gameOverMenuButton");
+const resultTitle = document.querySelector("#resultTitle");
 const finalScoreLabel = document.querySelector("#finalScoreLabel");
 const finalLinesLabel = document.querySelector("#finalLinesLabel");
 
 const modes = {
-  classic: { label: "Classic", dropMs: 820, seedGarbage: false, goal: null },
-  stage: { label: "Stage 1", dropMs: 700, seedGarbage: true, goal: 10 },
-  arcade: { label: "5-Line", dropMs: 620, seedGarbage: false, goal: 40 },
+  endless: { label: "Endless", baseDropMs: 820, seedGarbage: false, targetLines: null, usesLevel: true },
+  lines200: { label: "200 Lines", baseDropMs: 820, seedGarbage: false, targetLines: 200, usesLevel: true },
+  stage: { label: "Stage 1", baseDropMs: 700, seedGarbage: true, targetLines: 10, usesLevel: false },
+  longLine: { label: "Long Line", baseDropMs: 620, seedGarbage: false, targetLines: null, usesLevel: false },
 };
 
 const cols = 10;
@@ -36,6 +38,10 @@ const lineClearDelayMs = 420;
 const softDropMs = 44;
 const previewCell = 18;
 const pieceTypes = ["I", "O", "T", "S", "Z", "J", "L"];
+const levelSpeedCurve = [
+  820, 760, 700, 640, 590, 540, 500, 460, 430, 400,
+  380, 360, 340, 320, 300, 285, 270, 255, 240, 225,
+];
 
 const colors = {
   I: "#53d7d2",
@@ -210,9 +216,10 @@ let holdType = "";
 let holdUsed = false;
 let score = 0;
 let lines = 0;
+let level = 1;
 let comboCount = -1;
 let backToBackActive = false;
-let currentModeKey = "classic";
+let currentModeKey = "endless";
 let paused = true;
 let gameOver = false;
 let lastTime = 0;
@@ -236,7 +243,23 @@ function cloneMatrix(matrix) {
 }
 
 function activeShapes() {
-  return currentModeKey === "arcade" ? fiveLineShapes : shapes;
+  return currentModeKey === "longLine" ? fiveLineShapes : shapes;
+}
+
+function currentMode() {
+  return modes[currentModeKey] ?? modes.endless;
+}
+
+function updateLevel() {
+  const mode = currentMode();
+  level = mode.usesLevel ? Math.floor(lines / 10) + 1 : 1;
+  modeLabel.textContent = mode.usesLevel ? `${mode.label} Lv ${level}` : mode.label;
+}
+
+function currentDropMs() {
+  const mode = currentMode();
+  if (!mode.usesLevel) return mode.baseDropMs;
+  return levelSpeedCurve[Math.min(level - 1, levelSpeedCurve.length - 1)];
 }
 
 function pieceFromType(type) {
@@ -318,7 +341,7 @@ function spawnNextPiece() {
 
 function resetGame(modeKey = currentModeKey) {
   currentModeKey = modeKey;
-  const mode = modes[currentModeKey] ?? modes.classic;
+  const mode = currentMode();
   board = createBoard();
   nextQueue = [];
   refillQueue();
@@ -326,6 +349,7 @@ function resetGame(modeKey = currentModeKey) {
   holdUsed = false;
   score = 0;
   lines = 0;
+  level = 1;
   comboCount = -1;
   backToBackActive = false;
   piece = takeNextPiece();
@@ -341,7 +365,8 @@ function resetGame(modeKey = currentModeKey) {
   paused = false;
   gameOver = false;
   gameOverOverlay.hidden = true;
-  modeLabel.textContent = mode.label;
+  resultTitle.textContent = "GAME OVER";
+  updateLevel();
   scoreLabel.textContent = String(score);
   linesLabel.textContent = String(lines);
 
@@ -425,6 +450,7 @@ function applyLineClear(clearedRows) {
   }
 
   lines += clearedRows.length;
+  updateLevel();
   score += [0, 100, 300, 500, 800][clearedRows.length] ?? clearedRows.length * 250;
   scoreLabel.textContent = String(score);
   linesLabel.textContent = String(lines);
@@ -483,6 +509,10 @@ function finishLineClearDelay() {
   }
 
   awardLineClearBonuses(cleared, wasTSpin);
+  if (currentMode().targetLines && lines >= currentMode().targetLines) {
+    completeGame();
+    return;
+  }
   spawnNextPiece();
 }
 
@@ -520,7 +550,7 @@ function rotateMatrix(matrix, direction) {
 
 function kickTableFor(target) {
   if (target.type === "O") return [[0, 0]];
-  if (target.type === "I" && currentModeKey !== "arcade") return iKickTable;
+  if (target.type === "I" && currentModeKey !== "longLine") return iKickTable;
   return normalKickTable;
 }
 
@@ -659,13 +689,27 @@ function holdPiece() {
   }
 }
 
-function endGame() {
+function showResult(title) {
   gameOver = true;
   paused = true;
   softDropActive = false;
+  pendingEntryDelay = null;
+  pendingLineClear = null;
+  resultTitle.textContent = title;
   finalScoreLabel.textContent = String(score);
   finalLinesLabel.textContent = String(lines);
   gameOverOverlay.hidden = false;
+}
+
+function endGame() {
+  showResult("GAME OVER");
+}
+
+function completeGame() {
+  score += 5000;
+  scoreLabel.textContent = String(score);
+  notices.push({ text: "CLEAR", age: 0, duration: 1200 });
+  showResult("CLEAR");
 }
 
 function drawBlock(context, x, y, size, color, alpha = 1) {
@@ -850,7 +894,7 @@ function update(time = 0) {
       return;
     }
 
-    const interval = softDropActive ? softDropMs : (modes[currentModeKey] ?? modes.classic).dropMs;
+    const interval = softDropActive ? softDropMs : currentDropMs();
     dropCounter += delta;
     if (dropCounter > interval) {
       moveDown(false);
@@ -876,6 +920,7 @@ function startMode(modeKey) {
 function returnToTitle() {
   paused = true;
   gameOver = false;
+  resultTitle.textContent = "GAME OVER";
   gameOverOverlay.hidden = true;
   optionsDialog.close();
   gameScreen.classList.remove("is-active");
@@ -1008,6 +1053,6 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js").then((registration) => registration.update());
 }
 
-resetGame("classic");
+resetGame("endless");
 paused = true;
 requestAnimationFrame(update);
