@@ -27,6 +27,8 @@ const achievementCloseButton = document.querySelector("#achievementCloseButton")
 const achievementGrid = document.querySelector("#achievementGrid");
 const achievementSummary = document.querySelector("#achievementSummary");
 const achievementProgressText = document.querySelector("#achievementProgressText");
+const totalPlayTimeLabel = document.querySelector("#totalPlayTimeLabel");
+const averagePlayTimeLabel = document.querySelector("#averagePlayTimeLabel");
 const achievementDetailIcon = document.querySelector("#achievementDetailIcon");
 const achievementDetailTitle = document.querySelector("#achievementDetailTitle");
 const achievementDetailDescription = document.querySelector("#achievementDetailDescription");
@@ -46,7 +48,10 @@ const modeAchievementLabels = {
   longLine: { label: "Long Line", icon: "L" },
 };
 const achievementStorageKey = "x-line-achievements-v1";
-const achievementTiers = [1, 10, 25, 50, 100, 250, 500, 999];
+const playDayAchievementTiers = [1, 3, 7, 15, 30, 60, 77, 100];
+const modePlayAchievementTiers = [1, 3, 5, 10, 20, 30, 40, 50];
+const lineAchievementTiers = [1, 10, 25, 50, 100, 250, 500, 999];
+const playtimeSaveIntervalMs = 5000;
 
 const cols = 10;
 const rows = 20;
@@ -257,6 +262,7 @@ let pendingSpawnInput = { hold: false, rotate: 0 };
 let touchState = null;
 let currentRunLines = 0;
 let selectedAchievementId = "";
+let playtimeUnsavedMs = 0;
 
 function createBoard() {
   return Array.from({ length: rows }, () => Array(cols).fill(""));
@@ -268,7 +274,7 @@ function cloneMatrix(matrix) {
 
 function buildAchievements() {
   const definitions = [
-    ...achievementTiers.map((tier) => ({
+    ...playDayAchievementTiers.map((tier) => ({
       id: `play_days_${tier}`,
       icon: "D",
       title: `${tier} Days`,
@@ -276,7 +282,7 @@ function buildAchievements() {
       metric: "playDays",
       target: tier,
     })),
-    ...achievementTiers.map((tier) => ({
+    ...lineAchievementTiers.map((tier) => ({
       id: `total_lines_${tier}`,
       icon: "LN",
       title: `${tier} Lines`,
@@ -284,7 +290,7 @@ function buildAchievements() {
       metric: "totalLines",
       target: tier,
     })),
-    ...achievementTiers.map((tier) => ({
+    ...lineAchievementTiers.map((tier) => ({
       id: `cleanup_lines_${tier}`,
       icon: "CL",
       title: `Clean ${tier}`,
@@ -303,7 +309,7 @@ function buildAchievements() {
   ];
 
   Object.entries(modeAchievementLabels).forEach(([modeKey, mode]) => {
-    achievementTiers.forEach((tier) => {
+    modePlayAchievementTiers.forEach((tier) => {
       definitions.push({
         id: `mode_${modeKey}_${tier}`,
         icon: mode.icon,
@@ -324,6 +330,8 @@ function defaultAchievementState() {
     playDates: [],
     totalLines: 0,
     cleanupLines: 0,
+    totalPlayMs: 0,
+    dailyPlayMs: {},
     modePlays: Object.fromEntries(Object.keys(modes).map((modeKey) => [modeKey, 0])),
     noClearGameOvers: 0,
     unlocked: {},
@@ -339,6 +347,8 @@ function loadAchievementState() {
       ...fallback,
       ...saved,
       playDates: Array.isArray(saved.playDates) ? saved.playDates : fallback.playDates,
+      totalPlayMs: Number(saved.totalPlayMs) || 0,
+      dailyPlayMs: saved.dailyPlayMs || fallback.dailyPlayMs,
       modePlays: { ...fallback.modePlays, ...(saved.modePlays || {}) },
       unlocked: saved.unlocked || fallback.unlocked,
     };
@@ -371,6 +381,14 @@ function formatDateTime(value) {
     month: "2-digit",
     day: "2-digit",
   });
+}
+
+function formatDuration(ms) {
+  const totalMinutes = Math.floor(ms / 60000);
+  if (totalMinutes < 60) return `${totalMinutes}m`;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return minutes ? `${hours}h ${minutes}m` : `${hours}h`;
 }
 
 function achievementProgress(definition) {
@@ -416,10 +434,43 @@ function recordLineClear(clearedRows, cleanupLineCount) {
   checkAchievements();
 }
 
+function recordPlayTime(delta) {
+  if (delta <= 0) return;
+
+  const today = todayKey();
+  achievementState.totalPlayMs += delta;
+  achievementState.dailyPlayMs[today] = (achievementState.dailyPlayMs[today] || 0) + delta;
+  playtimeUnsavedMs += delta;
+
+  if (playtimeUnsavedMs >= playtimeSaveIntervalMs) {
+    playtimeUnsavedMs = 0;
+    saveAchievementState();
+    renderAchievementSummary();
+  }
+}
+
+function flushPlayTime() {
+  if (!playtimeUnsavedMs) return;
+  playtimeUnsavedMs = 0;
+  saveAchievementState();
+  renderAchievementSummary();
+}
+
 function recordNoClearGameOver() {
   achievementState.noClearGameOvers += 1;
   saveAchievementState();
   checkAchievements();
+}
+
+function renderAchievementSummary() {
+  const unlockedCount = achievements.filter((definition) => achievementState.unlocked[definition.id]).length;
+  achievementSummary.textContent = `${unlockedCount} / ${achievements.length}`;
+  achievementProgressText.textContent =
+    unlockedCount === achievements.length ? "Complete" : `${achievements.length - unlockedCount}個の実績が残っています`;
+  totalPlayTimeLabel.textContent = formatDuration(achievementState.totalPlayMs);
+  averagePlayTimeLabel.textContent = formatDuration(
+    achievementState.playDates.length ? achievementState.totalPlayMs / achievementState.playDates.length : 0,
+  );
 }
 
 function selectAchievement(id) {
@@ -444,10 +495,7 @@ function renderAchievementDetail() {
 function renderAchievements() {
   if (!achievementGrid) return;
 
-  const unlockedCount = achievements.filter((definition) => achievementState.unlocked[definition.id]).length;
-  achievementSummary.textContent = `${unlockedCount} / ${achievements.length}`;
-  achievementProgressText.textContent =
-    unlockedCount === achievements.length ? "Complete" : `${achievements.length - unlockedCount}個の実績が残っています`;
+  renderAchievementSummary();
 
   achievementGrid.innerHTML = "";
   achievements.forEach((definition) => {
@@ -984,6 +1032,7 @@ function holdPiece() {
 }
 
 function showResult(title) {
+  flushPlayTime();
   gameOver = true;
   paused = true;
   softDropActive = false;
@@ -1186,6 +1235,8 @@ function update(time = 0) {
   lastTime = time;
 
   if (!paused && !gameOver) {
+    recordPlayTime(delta);
+
     if (pendingLineClear) {
       pendingLineClear.age += delta;
       if (pendingLineClear.age >= pendingLineClear.duration) {
@@ -1245,6 +1296,7 @@ function startMode(modeKey) {
 }
 
 function returnToTitle() {
+  flushPlayTime();
   paused = true;
   gameOver = false;
   resultTitle.textContent = "GAME OVER";
@@ -1259,6 +1311,7 @@ document.querySelectorAll("[data-mode]").forEach((button) => {
 });
 
 achievementButton.addEventListener("click", () => {
+  flushPlayTime();
   renderAchievements();
   achievementsDialog.showModal();
 });
@@ -1269,6 +1322,7 @@ achievementCloseButton.addEventListener("click", () => {
 
 optionButton.addEventListener("click", () => {
   if (gameOver) return;
+  flushPlayTime();
   paused = true;
   softDropActive = false;
   optionsDialog.showModal();
@@ -1293,6 +1347,8 @@ restartButton.addEventListener("click", () => {
 quitButton.addEventListener("click", returnToTitle);
 retryButton.addEventListener("click", () => beginGame(currentModeKey));
 gameOverMenuButton.addEventListener("click", returnToTitle);
+
+window.addEventListener("pagehide", flushPlayTime);
 
 gameStage.addEventListener("pointerdown", (event) => {
   if (paused || gameOver) return;

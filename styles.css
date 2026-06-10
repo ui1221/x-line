@@ -507,6 +507,33 @@ h1 {
   text-align: right;
 }
 
+.playtime-summary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.playtime-summary div {
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.playtime-summary span {
+  display: block;
+  color: #b9e9f3;
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.playtime-summary strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.1rem;
+  font-weight: 950;
+}
+
 .achievement-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
