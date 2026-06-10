@@ -418,8 +418,29 @@ function kickTableFor(target) {
 
 function kicksFor(target, from, to) {
   const table = kickTableFor(target);
-  if (Array.isArray(table)) return table;
-  return table[`${from}>${to}`] ?? [[0, 0]];
+  const base = Array.isArray(table) ? table : table[`${from}>${to}`] ?? [[0, 0]];
+
+  if (target.type !== "T") return base;
+
+  const forgivingTSpinKicks = [
+    [0, -1],
+    [-1, -1],
+    [1, -1],
+    [0, -2],
+    [-1, -2],
+    [1, -2],
+    [-2, 0],
+    [2, 0],
+    [-2, -1],
+    [2, -1],
+  ];
+  const seen = new Set();
+  return [...base, ...forgivingTSpinKicks].filter(([dx, dy]) => {
+    const key = `${dx},${dy}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function detectTSpin(target) {
