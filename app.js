@@ -265,6 +265,7 @@ let currentRunLines = 0;
 let selectedAchievementId = "";
 let playtimeUnsavedMs = 0;
 let pendingAchievementUnlocks = [];
+let gameHistoryGuardActive = false;
 
 function createBoard() {
   return Array.from({ length: rows }, () => Array(cols).fill(""));
@@ -1336,16 +1337,28 @@ function beginGame(modeKey) {
   recordGameStart(modeKey);
 }
 
+function armGameHistoryGuard() {
+  if (gameHistoryGuardActive || !window.history?.pushState) return;
+  try {
+    history.pushState({ xLineGameGuard: true }, "", location.href);
+    gameHistoryGuardActive = true;
+  } catch {
+    gameHistoryGuardActive = false;
+  }
+}
+
 function startMode(modeKey) {
   beginGame(modeKey);
   titleScreen.classList.remove("is-active");
   gameScreen.classList.add("is-active");
+  armGameHistoryGuard();
 }
 
 function returnToTitle() {
   flushPlayTime();
   pendingAchievementUnlocks = [];
   clearAchievementBanners();
+  gameHistoryGuardActive = false;
   paused = true;
   gameOver = false;
   resultTitle.textContent = "GAME OVER";
@@ -1398,6 +1411,16 @@ retryButton.addEventListener("click", () => beginGame(currentModeKey));
 gameOverMenuButton.addEventListener("click", returnToTitle);
 
 window.addEventListener("pagehide", flushPlayTime);
+
+window.addEventListener("popstate", () => {
+  if (!gameScreen.classList.contains("is-active")) {
+    gameHistoryGuardActive = false;
+    return;
+  }
+
+  gameHistoryGuardActive = false;
+  armGameHistoryGuard();
+});
 
 gameStage.addEventListener("pointerdown", (event) => {
   if (paused || gameOver) return;
