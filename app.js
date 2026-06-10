@@ -25,7 +25,7 @@ const finalLinesLabel = document.querySelector("#finalLinesLabel");
 const modes = {
   endless: { label: "Endless", baseDropMs: 820, seedGarbage: false, targetLines: null, usesLevel: true },
   lines200: { label: "200 Lines", baseDropMs: 820, seedGarbage: false, targetLines: 200, usesLevel: true },
-  stage: { label: "Stage 1", baseDropMs: 700, seedGarbage: true, targetLines: 10, usesLevel: false },
+  cleanup: { label: "Clean Up", baseDropMs: 700, cleanup: true, targetLines: null, usesLevel: false },
   longLine: { label: "Long Line", baseDropMs: 620, seedGarbage: false, targetLines: null, usesLevel: false },
 };
 
@@ -35,6 +35,7 @@ const cell = 30;
 const lockDelayMs = 460;
 const entryDelayMs = 120;
 const lineClearDelayMs = 420;
+const cleanupRiseDelayMs = 720;
 const softDropMs = 44;
 const previewCell = 18;
 const pieceTypes = ["I", "O", "T", "S", "Z", "J", "L"];
@@ -51,6 +52,7 @@ const colors = {
   Z: "#e4666d",
   J: "#5f83d7",
   L: "#e79a4f",
+  G: "#8b98a4",
 };
 
 const shapes = {
@@ -231,6 +233,7 @@ let clearSweeps = [];
 let notices = [];
 let pendingLineClear = null;
 let pendingEntryDelay = null;
+let pendingCleanupRise = null;
 let pendingSpawnInput = { hold: false, rotate: 0 };
 let touchState = null;
 
@@ -260,6 +263,46 @@ function currentDropMs() {
   const mode = currentMode();
   if (!mode.usesLevel) return mode.baseDropMs;
   return levelSpeedCurve[Math.min(level - 1, levelSpeedCurve.length - 1)];
+}
+
+function hasCleanupBlocks() {
+  return board.some((row) => row.some((cellValue) => cellValue === "G"));
+}
+
+function makeCleanupRow() {
+  const row = Array(cols).fill("G");
+  const holes = 2 + Math.floor(Math.random() * 2);
+  const holeColumns = new Set();
+
+  while (holeColumns.size < holes) {
+    holeColumns.add(Math.floor(Math.random() * cols));
+  }
+
+  holeColumns.forEach((x) => {
+    row[x] = "";
+  });
+
+  return row;
+}
+
+function addCleanupRows(count) {
+  if (board.slice(0, count).some((row) => row.some(Boolean))) {
+    endGame();
+    return false;
+  }
+
+  board = board.slice(count);
+  for (let i = 0; i < count; i += 1) {
+    board.push(makeCleanupRow());
+  }
+
+  return true;
+}
+
+function seedCleanupRows(count) {
+  for (let y = rows - count; y < rows; y += 1) {
+    board[y] = makeCleanupRow();
+  }
 }
 
 function pieceFromType(type) {
@@ -361,6 +404,7 @@ function resetGame(modeKey = currentModeKey) {
   notices = [];
   pendingLineClear = null;
   pendingEntryDelay = null;
+  pendingCleanupRise = null;
   pendingSpawnInput = { hold: false, rotate: 0 };
   paused = false;
   gameOver = false;
@@ -370,13 +414,7 @@ function resetGame(modeKey = currentModeKey) {
   scoreLabel.textContent = String(score);
   linesLabel.textContent = String(lines);
 
-  if (mode.seedGarbage) {
-    for (let y = rows - 3; y < rows; y += 1) {
-      for (let x = 0; x < cols; x += 1) {
-        board[y][x] = Math.random() > 0.22 ? "Z" : "";
-      }
-    }
-  }
+  if (mode.cleanup) seedCleanupRows(3);
 
   if (collide(piece)) {
     endGame();
@@ -513,7 +551,33 @@ function finishLineClearDelay() {
     completeGame();
     return;
   }
+
+  if (currentMode().cleanup && !hasCleanupBlocks()) {
+    startCleanupRiseDelay();
+    return;
+  }
+
   spawnNextPiece();
+}
+
+function startCleanupRiseDelay() {
+  score += 500;
+  scoreLabel.textContent = String(score);
+  notices.push({ text: "CLEAN", age: 0, duration: 840 });
+  pendingCleanupRise = { age: 0, duration: cleanupRiseDelayMs, rows: 2 };
+  piece = null;
+  softDropActive = false;
+}
+
+function finishCleanupRiseDelay() {
+  if (!pendingCleanupRise) return;
+  const { rows: rowCount } = pendingCleanupRise;
+  pendingCleanupRise = null;
+
+  if (addCleanupRows(rowCount)) {
+    notices.push({ text: "NEW FLOOR", age: 0, duration: 760 });
+    spawnNextPiece();
+  }
 }
 
 function lockPiece() {
@@ -695,6 +759,7 @@ function showResult(title) {
   softDropActive = false;
   pendingEntryDelay = null;
   pendingLineClear = null;
+  pendingCleanupRise = null;
   resultTitle.textContent = title;
   finalScoreLabel.textContent = String(score);
   finalLinesLabel.textContent = String(lines);
@@ -781,6 +846,19 @@ function drawClearSweeps(delta) {
   });
 }
 
+function drawCleanupRise(delta) {
+  if (!pendingCleanupRise) return;
+  const t = Math.min(1, pendingCleanupRise.age / pendingCleanupRise.duration);
+  const height = cell * pendingCleanupRise.rows * (0.45 + t * 0.55);
+  const y = canvas.height - height;
+  const gradient = ctx.createLinearGradient(0, y, 0, canvas.height);
+  gradient.addColorStop(0, "rgba(221,246,255,0)");
+  gradient.addColorStop(0.48, "rgba(221,246,255,0.2)");
+  gradient.addColorStop(1, "rgba(139,152,164,0.46)");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, y, canvas.width, height);
+}
+
 function drawParticles(delta) {
   particles = particles.filter((particle) => {
     particle.life -= delta;
@@ -864,6 +942,7 @@ function draw(delta = 0) {
   }
 
   drawClearSweeps(delta);
+  drawCleanupRise(delta);
   drawParticles(delta);
   drawNotices(delta);
   drawPreviews();
@@ -888,6 +967,16 @@ function update(time = 0) {
       pendingEntryDelay.age += delta;
       if (pendingEntryDelay.age >= pendingEntryDelay.duration) {
         spawnNextPiece();
+      }
+      draw(delta);
+      requestAnimationFrame(update);
+      return;
+    }
+
+    if (pendingCleanupRise) {
+      pendingCleanupRise.age += delta;
+      if (pendingCleanupRise.age >= pendingCleanupRise.duration) {
+        finishCleanupRiseDelay();
       }
       draw(delta);
       requestAnimationFrame(update);
