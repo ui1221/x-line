@@ -50,6 +50,11 @@
             <span>Long Line</span>
             <small>長いIミノで遊ぶ</small>
           </button>
+          <button class="mode-button" type="button" data-mode="blast">
+            <img class="mode-icon" src="assets/modes/blast.png" alt="">
+            <span>Blast</span>
+            <small>ゲージで一気に吹き飛ぶ</small>
+          </button>
         </div>
       </section>
 
@@ -67,6 +72,14 @@
             <span>Hold</span>
             <canvas id="holdCanvas" width="96" height="72"></canvas>
           </aside>
+
+          <div class="blast-gauge" id="blastGauge" aria-label="ブラストゲージ" hidden>
+            <span>Blast</span>
+            <div class="blast-gauge-track">
+              <div class="blast-gauge-fill" id="blastGaugeFill"></div>
+            </div>
+            <strong id="blastGaugeLabel">0%</strong>
+          </div>
 
           <div class="playfield-shell">
             <canvas id="gameCanvas" width="300" height="600" aria-label="ゲーム画面"></canvas>
