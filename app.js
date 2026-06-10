@@ -31,6 +31,7 @@ const cols = 10;
 const rows = 20;
 const cell = 30;
 const lockDelayMs = 460;
+const lineClearDelayMs = 420;
 const softDropMs = 44;
 const previewCell = 18;
 const pieceTypes = ["I", "O", "T", "S", "Z", "J", "L"];
@@ -218,6 +219,7 @@ let softDropActive = false;
 let particles = [];
 let clearSweeps = [];
 let notices = [];
+let pendingLineClear = null;
 let touchState = null;
 
 function createBoard() {
@@ -283,6 +285,7 @@ function resetGame(modeKey = currentModeKey) {
   particles = [];
   clearSweeps = [];
   notices = [];
+  pendingLineClear = null;
   paused = false;
   gameOver = false;
   gameOverOverlay.hidden = true;
@@ -355,15 +358,14 @@ function spawnLockParticles(cells, color) {
   });
 }
 
-function clearLines() {
-  const clearedRows = [];
-  board.forEach((row, y) => {
+function completedRows() {
+  return board.reduce((clearedRows, row, y) => {
     if (row.every(Boolean)) clearedRows.push(y);
-  });
+    return clearedRows;
+  }, []);
+}
 
-  if (!clearedRows.length) return 0;
-
-  clearedRows.forEach((row) => clearSweeps.push({ row, age: 0, duration: 430 }));
+function applyLineClear(clearedRows) {
   board = board.filter((_, y) => !clearedRows.includes(y));
 
   while (board.length < rows) {
@@ -377,6 +379,40 @@ function clearLines() {
   return clearedRows.length;
 }
 
+function startLineClearDelay(clearedRows, wasTSpin) {
+  pendingLineClear = {
+    age: 0,
+    duration: lineClearDelayMs,
+    rows: clearedRows,
+    wasTSpin,
+  };
+  clearedRows.forEach((row) => clearSweeps.push({ row, age: 0, duration: lineClearDelayMs }));
+  piece = null;
+  softDropActive = false;
+}
+
+function finishLineClearDelay() {
+  if (!pendingLineClear) return;
+  const { rows: clearedRows, wasTSpin } = pendingLineClear;
+  pendingLineClear = null;
+  const cleared = applyLineClear(clearedRows);
+
+  if (wasTSpin) {
+    score += [0, 800, 1200, 1600, 2000][cleared] ?? cleared * 600;
+    scoreLabel.textContent = String(score);
+    notices.push({ text: `T-SPIN x${cleared}`, age: 0, duration: 760 });
+  }
+
+  piece = takeNextPiece();
+  holdUsed = false;
+  lockStart = 0;
+  dropCounter = 0;
+
+  if (collide(piece)) {
+    endGame();
+  }
+}
+
 function lockPiece() {
   if (!piece || gameOver) return;
   const landedCells = pieceCells();
@@ -384,12 +420,17 @@ function lockPiece() {
   const wasTSpin = piece.tSpin;
   mergePiece();
   spawnLockParticles(landedCells, landedColor);
-  const cleared = clearLines();
+  const clearedRows = completedRows();
+
+  if (clearedRows.length) {
+    startLineClearDelay(clearedRows, wasTSpin);
+    return;
+  }
 
   if (wasTSpin) {
-    score += cleared ? [0, 800, 1200, 1600, 2000][cleared] ?? cleared * 600 : 400;
+    score += 400;
     scoreLabel.textContent = String(score);
-    notices.push({ text: cleared ? `T-SPIN x${cleared}` : "T-SPIN", age: 0, duration: 760 });
+    notices.push({ text: "T-SPIN", age: 0, duration: 760 });
   }
 
   piece = takeNextPiece();
@@ -713,6 +754,16 @@ function update(time = 0) {
   lastTime = time;
 
   if (!paused && !gameOver) {
+    if (pendingLineClear) {
+      pendingLineClear.age += delta;
+      if (pendingLineClear.age >= pendingLineClear.duration) {
+        finishLineClearDelay();
+      }
+      draw(delta);
+      requestAnimationFrame(update);
+      return;
+    }
+
     const interval = softDropActive ? softDropMs : (modes[currentModeKey] ?? modes.classic).dropMs;
     dropCounter += delta;
     if (dropCounter > interval) {
