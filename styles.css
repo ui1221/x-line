@@ -167,8 +167,13 @@ h1 {
 
 .screen-title .mode-button {
   position: relative;
-  min-height: 72px;
-  padding: 14px 16px 14px 52px;
+  min-height: 92px;
+  display: grid;
+  grid-template-columns: 62px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  align-items: center;
+  padding: 12px;
   border: 1px solid rgba(221, 246, 255, 0.24);
   border-radius: 8px;
   background:
@@ -178,21 +183,17 @@ h1 {
   text-align: left;
 }
 
-.screen-title .mode-button::before {
-  content: "";
-  position: absolute;
-  top: 19px;
-  left: 17px;
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(217, 248, 255, 0.72);
-  border-radius: 6px;
-  background: linear-gradient(135deg, #53d7d2, #f6d85a);
-  box-shadow: 0 0 18px rgba(83, 215, 210, 0.28);
-}
-
 .screen-title .mode-button:active {
   transform: translateY(1px);
+}
+
+.mode-icon {
+  grid-row: 1 / 3;
+  width: 62px;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.26);
 }
 
 .screen-title .mode-button span {

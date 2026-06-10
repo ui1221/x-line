@@ -1,4 +1,4 @@
-const cacheName = "x-line-pwa-v17";
+const cacheName = "x-line-pwa-v18";
 const assets = [
   ".",
   "index.html",
@@ -8,6 +8,10 @@ const assets = [
   "robots.txt",
   "icons/icon-192.png",
   "icons/icon-512.png",
+  "assets/modes/endless.png",
+  "assets/modes/lines200.png",
+  "assets/modes/cleanup.png",
+  "assets/modes/longline.png",
 ];
 
 self.addEventListener("install", (event) => {
