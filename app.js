@@ -31,6 +31,7 @@ const cols = 10;
 const rows = 20;
 const cell = 30;
 const lockDelayMs = 460;
+const entryDelayMs = 120;
 const lineClearDelayMs = 420;
 const softDropMs = 44;
 const previewCell = 18;
@@ -209,6 +210,8 @@ let holdType = "";
 let holdUsed = false;
 let score = 0;
 let lines = 0;
+let comboCount = -1;
+let backToBackActive = false;
 let currentModeKey = "classic";
 let paused = true;
 let gameOver = false;
@@ -220,6 +223,8 @@ let particles = [];
 let clearSweeps = [];
 let notices = [];
 let pendingLineClear = null;
+let pendingEntryDelay = null;
+let pendingSpawnInput = { hold: false, rotate: 0 };
 let touchState = null;
 
 function createBoard() {
@@ -268,6 +273,49 @@ function takeNextPiece() {
   return pieceFromType(next);
 }
 
+function queueEntryDelay(duration = entryDelayMs) {
+  piece = null;
+  softDropActive = false;
+  pendingEntryDelay = { age: 0, duration };
+}
+
+function bufferSpawnHold() {
+  if (pendingLineClear || pendingEntryDelay || !piece) {
+    pendingSpawnInput.hold = true;
+    return true;
+  }
+
+  return false;
+}
+
+function bufferSpawnRotation(direction) {
+  if (pendingLineClear || pendingEntryDelay || !piece) {
+    pendingSpawnInput.rotate = direction;
+    return true;
+  }
+
+  return false;
+}
+
+function spawnNextPiece() {
+  pendingEntryDelay = null;
+  piece = takeNextPiece();
+  holdUsed = false;
+  lockStart = 0;
+  dropCounter = 0;
+
+  if (collide(piece)) {
+    endGame();
+    return;
+  }
+
+  const buffered = { ...pendingSpawnInput };
+  pendingSpawnInput = { hold: false, rotate: 0 };
+
+  if (buffered.hold) holdPiece();
+  if (!gameOver && buffered.rotate) rotatePiece(buffered.rotate);
+}
+
 function resetGame(modeKey = currentModeKey) {
   currentModeKey = modeKey;
   const mode = modes[currentModeKey] ?? modes.classic;
@@ -278,6 +326,8 @@ function resetGame(modeKey = currentModeKey) {
   holdUsed = false;
   score = 0;
   lines = 0;
+  comboCount = -1;
+  backToBackActive = false;
   piece = takeNextPiece();
   dropCounter = 0;
   lockStart = 0;
@@ -286,6 +336,8 @@ function resetGame(modeKey = currentModeKey) {
   clearSweeps = [];
   notices = [];
   pendingLineClear = null;
+  pendingEntryDelay = null;
+  pendingSpawnInput = { hold: false, rotate: 0 };
   paused = false;
   gameOver = false;
   gameOverOverlay.hidden = true;
@@ -379,6 +431,33 @@ function applyLineClear(clearedRows) {
   return clearedRows.length;
 }
 
+function awardLineClearBonuses(cleared, wasTSpin) {
+  const difficultClear = cleared >= 4 || wasTSpin;
+  comboCount += 1;
+
+  if (comboCount > 0) {
+    score += comboCount * 50;
+    notices.push({ text: `COMBO ${comboCount}`, age: 0, duration: 620 });
+  }
+
+  if (difficultClear) {
+    if (backToBackActive) {
+      score += 400;
+      notices.push({ text: "BACK-TO-BACK", age: 0, duration: 760 });
+    }
+    backToBackActive = true;
+  } else {
+    backToBackActive = false;
+  }
+
+  if (board.every((row) => row.every((cellValue) => !cellValue))) {
+    score += 1000;
+    notices.push({ text: "PERFECT CLEAR", age: 0, duration: 920 });
+  }
+
+  scoreLabel.textContent = String(score);
+}
+
 function startLineClearDelay(clearedRows, wasTSpin) {
   pendingLineClear = {
     age: 0,
@@ -403,14 +482,8 @@ function finishLineClearDelay() {
     notices.push({ text: `T-SPIN x${cleared}`, age: 0, duration: 760 });
   }
 
-  piece = takeNextPiece();
-  holdUsed = false;
-  lockStart = 0;
-  dropCounter = 0;
-
-  if (collide(piece)) {
-    endGame();
-  }
+  awardLineClearBonuses(cleared, wasTSpin);
+  spawnNextPiece();
 }
 
 function lockPiece() {
@@ -433,14 +506,8 @@ function lockPiece() {
     notices.push({ text: "T-SPIN", age: 0, duration: 760 });
   }
 
-  piece = takeNextPiece();
-  holdUsed = false;
-  lockStart = 0;
-  dropCounter = 0;
-
-  if (collide(piece)) {
-    endGame();
-  }
+  comboCount = -1;
+  queueEntryDelay();
 }
 
 function rotateMatrix(matrix, direction) {
@@ -499,7 +566,11 @@ function detectTSpin(target) {
 }
 
 function rotatePiece(direction) {
-  if (!piece || paused || gameOver) return;
+  if (paused || gameOver) return;
+  if (!piece) {
+    bufferSpawnRotation(direction);
+    return;
+  }
   const rotated = rotateMatrix(piece.matrix, direction);
   const from = piece.rotation ?? 0;
   const to = (from + (direction > 0 ? 1 : 3)) % 4;
@@ -564,7 +635,12 @@ function hardDrop() {
 }
 
 function holdPiece() {
-  if (!piece || paused || gameOver || holdUsed) return;
+  if (paused || gameOver) return;
+  if (!piece) {
+    bufferSpawnHold();
+    return;
+  }
+  if (holdUsed) return;
 
   const outgoing = piece.type;
   if (holdType) {
@@ -758,6 +834,16 @@ function update(time = 0) {
       pendingLineClear.age += delta;
       if (pendingLineClear.age >= pendingLineClear.duration) {
         finishLineClearDelay();
+      }
+      draw(delta);
+      requestAnimationFrame(update);
+      return;
+    }
+
+    if (pendingEntryDelay) {
+      pendingEntryDelay.age += delta;
+      if (pendingEntryDelay.age >= pendingEntryDelay.duration) {
+        spawnNextPiece();
       }
       draw(delta);
       requestAnimationFrame(update);
