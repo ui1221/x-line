@@ -674,25 +674,19 @@ h1 {
 .achievement-badge {
   position: absolute;
   inset: 50% auto auto 50%;
-  min-width: 78%;
-  max-width: 92%;
-  padding: 5px 6px;
   transform: translate(-50%, -50%);
-  border: 1px solid rgba(255, 255, 255, 0.42);
-  border-radius: 8px;
-  background: rgba(5, 18, 30, 0.84);
   color: #fff1a8;
-  font-size: clamp(0.76rem, 3.4vw, 1rem);
+  font-size: clamp(1rem, 4.8vw, 1.35rem);
   font-weight: 950;
   line-height: 1;
   text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-  text-shadow: 0 2px 0 #000;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    0 4px 10px rgba(0, 0, 0, 0.34);
+  -webkit-text-stroke: 1.2px #03111c;
+  text-shadow:
+    0 2px 0 #03111c,
+    1px 0 0 #03111c,
+    -1px 0 0 #03111c,
+    0 -1px 0 #03111c;
 }
 
 .achievement-card-title {
@@ -729,33 +723,20 @@ h1 {
 .achievement-detail-icon.has-image {
   position: relative;
   padding: 0;
+  place-items: center;
   background:
     linear-gradient(180deg, rgba(7, 24, 39, 0), rgba(7, 24, 39, 0.2)),
     var(--achievement-image);
   background-size: cover;
   background-position: center;
   color: #fff1a8;
-  font-size: 1.02rem;
-  text-shadow: 0 1px 2px #000;
-}
-
-.achievement-detail-icon.has-image::before {
-  content: "";
-  position: absolute;
-  inset: 50% auto auto 50%;
-  width: 82%;
-  height: 34px;
-  transform: translate(-50%, -50%);
-  border: 1px solid rgba(255, 255, 255, 0.42);
-  border-radius: 8px;
-  background: rgba(5, 18, 30, 0.84);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    0 4px 10px rgba(0, 0, 0, 0.34);
-}
-
-.achievement-detail-icon.has-image {
-  z-index: 0;
+  font-size: 1.25rem;
+  -webkit-text-stroke: 1.2px #03111c;
+  text-shadow:
+    0 2px 0 #03111c,
+    1px 0 0 #03111c,
+    -1px 0 0 #03111c,
+    0 -1px 0 #03111c;
 }
 
 .achievement-detail h3 {
