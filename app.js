@@ -51,7 +51,8 @@ const modeAchievementLabels = {
 const achievementStorageKey = "x-line-achievements-v1";
 const playDayAchievementTiers = [1, 3, 7, 15, 30, 60, 77, 100];
 const modePlayAchievementTiers = [1, 3, 5, 10, 20, 30, 40, 50];
-const lineAchievementTiers = [1, 10, 25, 50, 100, 250, 500, 999];
+const totalLineAchievementTiers = [1, 10, 25, 50, 100, 250, 500, 999];
+const cleanupLineAchievementTiers = [1, 10, 25, 50, 100, 150, 200, 300];
 const playtimeSaveIntervalMs = 5000;
 
 const cols = 10;
@@ -285,7 +286,7 @@ function buildAchievements() {
       metric: "playDays",
       target: tier,
     })),
-    ...lineAchievementTiers.map((tier) => ({
+    ...totalLineAchievementTiers.map((tier) => ({
       id: `total_lines_${tier}`,
       icon: "LN",
       title: `${tier} Lines`,
@@ -293,7 +294,7 @@ function buildAchievements() {
       metric: "totalLines",
       target: tier,
     })),
-    ...lineAchievementTiers.map((tier) => ({
+    ...cleanupLineAchievementTiers.map((tier) => ({
       id: `cleanup_lines_${tier}`,
       icon: "CL",
       title: `Clean ${tier}`,
