@@ -21,6 +21,16 @@ const gameOverMenuButton = document.querySelector("#gameOverMenuButton");
 const resultTitle = document.querySelector("#resultTitle");
 const finalScoreLabel = document.querySelector("#finalScoreLabel");
 const finalLinesLabel = document.querySelector("#finalLinesLabel");
+const achievementButton = document.querySelector("#achievementButton");
+const achievementsDialog = document.querySelector("#achievementsDialog");
+const achievementCloseButton = document.querySelector("#achievementCloseButton");
+const achievementGrid = document.querySelector("#achievementGrid");
+const achievementSummary = document.querySelector("#achievementSummary");
+const achievementProgressText = document.querySelector("#achievementProgressText");
+const achievementDetailIcon = document.querySelector("#achievementDetailIcon");
+const achievementDetailTitle = document.querySelector("#achievementDetailTitle");
+const achievementDetailDescription = document.querySelector("#achievementDetailDescription");
+const achievementDetailMeta = document.querySelector("#achievementDetailMeta");
 
 const modes = {
   endless: { label: "Endless", baseDropMs: 820, seedGarbage: false, targetLines: null, usesLevel: true },
@@ -28,6 +38,15 @@ const modes = {
   cleanup: { label: "Clean Up", baseDropMs: 700, cleanup: true, targetLines: null, usesLevel: false },
   longLine: { label: "Long Line", baseDropMs: 620, seedGarbage: false, targetLines: null, usesLevel: false },
 };
+
+const modeAchievementLabels = {
+  endless: { label: "Endless", icon: "E" },
+  lines200: { label: "200 Lines", icon: "200" },
+  cleanup: { label: "Clean Up", icon: "C" },
+  longLine: { label: "Long Line", icon: "L" },
+};
+const achievementStorageKey = "x-line-achievements-v1";
+const achievementTiers = [1, 10, 25, 50, 100, 250, 500, 999];
 
 const cols = 10;
 const rows = 20;
@@ -236,6 +255,8 @@ let pendingEntryDelay = null;
 let pendingCleanupRise = null;
 let pendingSpawnInput = { hold: false, rotate: 0 };
 let touchState = null;
+let currentRunLines = 0;
+let selectedAchievementId = "";
 
 function createBoard() {
   return Array.from({ length: rows }, () => Array(cols).fill(""));
@@ -244,6 +265,211 @@ function createBoard() {
 function cloneMatrix(matrix) {
   return matrix.map((row) => [...row]);
 }
+
+function buildAchievements() {
+  const definitions = [
+    ...achievementTiers.map((tier) => ({
+      id: `play_days_${tier}`,
+      icon: "D",
+      title: `${tier} Days`,
+      description: `${tier}日プレイする`,
+      metric: "playDays",
+      target: tier,
+    })),
+    ...achievementTiers.map((tier) => ({
+      id: `total_lines_${tier}`,
+      icon: "LN",
+      title: `${tier} Lines`,
+      description: `合計${tier}ライン消す`,
+      metric: "totalLines",
+      target: tier,
+    })),
+    ...achievementTiers.map((tier) => ({
+      id: `cleanup_lines_${tier}`,
+      icon: "CL",
+      title: `Clean ${tier}`,
+      description: `お邪魔ブロックを含むラインを${tier}回消す`,
+      metric: "cleanupLines",
+      target: tier,
+    })),
+    {
+      id: "no_clear_game_over",
+      icon: "0",
+      title: "Zero Clear",
+      description: "一度もラインを消せずにゲームオーバーになる",
+      metric: "noClearGameOvers",
+      target: 1,
+    },
+  ];
+
+  Object.entries(modeAchievementLabels).forEach(([modeKey, mode]) => {
+    achievementTiers.forEach((tier) => {
+      definitions.push({
+        id: `mode_${modeKey}_${tier}`,
+        icon: mode.icon,
+        title: `${mode.label} x${tier}`,
+        description: `${mode.label}を${tier}回遊ぶ`,
+        metric: "modePlays",
+        modeKey,
+        target: tier,
+      });
+    });
+  });
+
+  return definitions;
+}
+
+function defaultAchievementState() {
+  return {
+    playDates: [],
+    totalLines: 0,
+    cleanupLines: 0,
+    modePlays: Object.fromEntries(Object.keys(modes).map((modeKey) => [modeKey, 0])),
+    noClearGameOvers: 0,
+    unlocked: {},
+  };
+}
+
+function loadAchievementState() {
+  const fallback = defaultAchievementState();
+
+  try {
+    const saved = JSON.parse(localStorage.getItem(achievementStorageKey) || "{}");
+    return {
+      ...fallback,
+      ...saved,
+      playDates: Array.isArray(saved.playDates) ? saved.playDates : fallback.playDates,
+      modePlays: { ...fallback.modePlays, ...(saved.modePlays || {}) },
+      unlocked: saved.unlocked || fallback.unlocked,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function saveAchievementState() {
+  try {
+    localStorage.setItem(achievementStorageKey, JSON.stringify(achievementState));
+  } catch {
+    // Achievements can still work for the current session if storage is unavailable.
+  }
+}
+
+function todayKey() {
+  const now = new Date();
+  return [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function formatDateTime(value) {
+  if (!value) return "未取得";
+  return new Date(value).toLocaleDateString("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+}
+
+function achievementProgress(definition) {
+  if (definition.metric === "playDays") return achievementState.playDates.length;
+  if (definition.metric === "totalLines") return achievementState.totalLines;
+  if (definition.metric === "cleanupLines") return achievementState.cleanupLines;
+  if (definition.metric === "modePlays") return achievementState.modePlays[definition.modeKey] || 0;
+  if (definition.metric === "noClearGameOvers") return achievementState.noClearGameOvers;
+  return 0;
+}
+
+function checkAchievements() {
+  let changed = false;
+
+  achievements.forEach((definition) => {
+    if (!achievementState.unlocked[definition.id] && achievementProgress(definition) >= definition.target) {
+      achievementState.unlocked[definition.id] = new Date().toISOString();
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    saveAchievementState();
+    renderAchievements();
+  }
+}
+
+function recordGameStart(modeKey) {
+  const today = todayKey();
+  if (!achievementState.playDates.includes(today)) {
+    achievementState.playDates.push(today);
+  }
+
+  achievementState.modePlays[modeKey] = (achievementState.modePlays[modeKey] || 0) + 1;
+  saveAchievementState();
+  checkAchievements();
+}
+
+function recordLineClear(clearedRows, cleanupLineCount) {
+  achievementState.totalLines += clearedRows.length;
+  achievementState.cleanupLines += cleanupLineCount;
+  saveAchievementState();
+  checkAchievements();
+}
+
+function recordNoClearGameOver() {
+  achievementState.noClearGameOvers += 1;
+  saveAchievementState();
+  checkAchievements();
+}
+
+function selectAchievement(id) {
+  selectedAchievementId = id;
+  renderAchievementDetail();
+}
+
+function renderAchievementDetail() {
+  const definition = achievements.find((item) => item.id === selectedAchievementId) || achievements[0];
+  if (!definition) return;
+
+  const acquiredAt = achievementState.unlocked[definition.id];
+  const progress = Math.min(achievementProgress(definition), definition.target);
+  achievementDetailIcon.textContent = acquiredAt ? definition.icon : "?";
+  achievementDetailTitle.textContent = definition.title;
+  achievementDetailDescription.textContent = definition.description;
+  achievementDetailMeta.textContent = acquiredAt
+    ? `取得日 ${formatDateTime(acquiredAt)}`
+    : `進行中 ${progress} / ${definition.target}`;
+}
+
+function renderAchievements() {
+  if (!achievementGrid) return;
+
+  const unlockedCount = achievements.filter((definition) => achievementState.unlocked[definition.id]).length;
+  achievementSummary.textContent = `${unlockedCount} / ${achievements.length}`;
+  achievementProgressText.textContent =
+    unlockedCount === achievements.length ? "Complete" : `${achievements.length - unlockedCount}個の実績が残っています`;
+
+  achievementGrid.innerHTML = "";
+  achievements.forEach((definition) => {
+    const unlocked = Boolean(achievementState.unlocked[definition.id]);
+    const button = document.createElement("button");
+    button.className = `achievement-card${unlocked ? " is-unlocked" : ""}`;
+    button.type = "button";
+    button.setAttribute("aria-label", definition.title);
+    button.innerHTML = `
+      <span class="achievement-icon">${unlocked ? definition.icon : "?"}</span>
+      <span class="achievement-card-title">${definition.title}</span>
+    `;
+    button.addEventListener("click", () => selectAchievement(definition.id));
+    achievementGrid.append(button);
+  });
+
+  if (!selectedAchievementId) selectedAchievementId = achievements[0]?.id || "";
+  renderAchievementDetail();
+}
+
+const achievements = buildAchievements();
+let achievementState = loadAchievementState();
 
 function activeShapes() {
   return currentModeKey === "longLine" ? fiveLineShapes : shapes;
@@ -392,6 +618,7 @@ function resetGame(modeKey = currentModeKey) {
   holdUsed = false;
   score = 0;
   lines = 0;
+  currentRunLines = 0;
   level = 1;
   comboCount = -1;
   backToBackActive = false;
@@ -481,6 +708,7 @@ function completedRows() {
 }
 
 function applyLineClear(clearedRows) {
+  const cleanupLineCount = clearedRows.filter((y) => board[y]?.includes("G")).length;
   board = board.filter((_, y) => !clearedRows.includes(y));
 
   while (board.length < rows) {
@@ -488,6 +716,8 @@ function applyLineClear(clearedRows) {
   }
 
   lines += clearedRows.length;
+  currentRunLines += clearedRows.length;
+  recordLineClear(clearedRows, cleanupLineCount);
   updateLevel();
   score += [0, 100, 300, 500, 800][clearedRows.length] ?? clearedRows.length * 250;
   scoreLabel.textContent = String(score);
@@ -767,6 +997,9 @@ function showResult(title) {
 }
 
 function endGame() {
+  if (!gameOver && currentRunLines === 0) {
+    recordNoClearGameOver();
+  }
   showResult("GAME OVER");
 }
 
@@ -1000,8 +1233,13 @@ function update(time = 0) {
   requestAnimationFrame(update);
 }
 
-function startMode(modeKey) {
+function beginGame(modeKey) {
+  recordGameStart(modeKey);
   resetGame(modeKey);
+}
+
+function startMode(modeKey) {
+  beginGame(modeKey);
   titleScreen.classList.remove("is-active");
   gameScreen.classList.add("is-active");
 }
@@ -1018,6 +1256,15 @@ function returnToTitle() {
 
 document.querySelectorAll("[data-mode]").forEach((button) => {
   button.addEventListener("click", () => startMode(button.dataset.mode));
+});
+
+achievementButton.addEventListener("click", () => {
+  renderAchievements();
+  achievementsDialog.showModal();
+});
+
+achievementCloseButton.addEventListener("click", () => {
+  achievementsDialog.close();
 });
 
 optionButton.addEventListener("click", () => {
@@ -1039,12 +1286,12 @@ resumeButton.addEventListener("click", () => {
 });
 
 restartButton.addEventListener("click", () => {
-  resetGame(currentModeKey);
+  beginGame(currentModeKey);
   optionsDialog.close();
 });
 
 quitButton.addEventListener("click", returnToTitle);
-retryButton.addEventListener("click", () => resetGame(currentModeKey));
+retryButton.addEventListener("click", () => beginGame(currentModeKey));
 gameOverMenuButton.addEventListener("click", returnToTitle);
 
 gameStage.addEventListener("pointerdown", (event) => {
@@ -1144,4 +1391,5 @@ if ("serviceWorker" in navigator) {
 
 resetGame("endless");
 paused = true;
+renderAchievements();
 requestAnimationFrame(update);

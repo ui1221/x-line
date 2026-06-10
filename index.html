@@ -17,6 +17,10 @@
   <body>
     <main class="app-shell" aria-live="polite">
       <section class="screen screen-title is-active" id="titleScreen">
+        <button class="achievement-button" id="achievementButton" type="button" aria-label="実績">
+          Awards
+        </button>
+
         <div class="brand-block">
           <p class="kicker">Mobile falling puzzle</p>
           <h1>X-LINE</h1>
@@ -122,6 +126,34 @@
           <button id="quitButton" type="button">タイトルへ戻る</button>
         </div>
       </form>
+    </dialog>
+
+    <dialog class="achievements-dialog" id="achievementsDialog">
+      <div class="achievements-panel">
+        <header>
+          <div>
+            <p class="kicker">Achievements</p>
+            <h2>実績</h2>
+          </div>
+          <button class="icon-button" id="achievementCloseButton" type="button" aria-label="閉じる">x</button>
+        </header>
+
+        <div class="achievement-summary">
+          <strong id="achievementSummary">0 / 0</strong>
+          <span id="achievementProgressText">まだ実績はありません</span>
+        </div>
+
+        <div class="achievement-grid" id="achievementGrid" aria-label="実績一覧"></div>
+
+        <section class="achievement-detail" id="achievementDetail" aria-live="polite">
+          <span class="achievement-detail-icon" id="achievementDetailIcon">?</span>
+          <div>
+            <h3 id="achievementDetailTitle">実績を選択</h3>
+            <p id="achievementDetailDescription">アイコンを押すと内容と達成日が表示されます。</p>
+            <small id="achievementDetailMeta">未取得</small>
+          </div>
+        </section>
+      </div>
     </dialog>
 
     <script src="app.js" type="module"></script>
