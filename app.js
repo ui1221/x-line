@@ -1542,7 +1542,16 @@ document.addEventListener(
 );
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js").then((registration) => registration.update());
+  let refreshingForUpdate = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (refreshingForUpdate) return;
+    refreshingForUpdate = true;
+    window.location.reload();
+  });
+
+  navigator.serviceWorker.register("sw.js").then((registration) => {
+    registration.update();
+  });
 }
 
 resetGame("endless");
