@@ -78,6 +78,124 @@ const fiveLineShapes = {
   I: [[1, 1, 1, 1, 1]],
 };
 
+const normalKickTable = {
+  "0>1": [
+    [0, 0],
+    [-1, 0],
+    [-1, 1],
+    [0, -2],
+    [-1, -2],
+  ],
+  "1>0": [
+    [0, 0],
+    [1, 0],
+    [1, -1],
+    [0, 2],
+    [1, 2],
+  ],
+  "1>2": [
+    [0, 0],
+    [1, 0],
+    [1, -1],
+    [0, 2],
+    [1, 2],
+  ],
+  "2>1": [
+    [0, 0],
+    [-1, 0],
+    [-1, 1],
+    [0, -2],
+    [-1, -2],
+  ],
+  "2>3": [
+    [0, 0],
+    [1, 0],
+    [1, 1],
+    [0, -2],
+    [1, -2],
+  ],
+  "3>2": [
+    [0, 0],
+    [-1, 0],
+    [-1, -1],
+    [0, 2],
+    [-1, 2],
+  ],
+  "3>0": [
+    [0, 0],
+    [-1, 0],
+    [-1, -1],
+    [0, 2],
+    [-1, 2],
+  ],
+  "0>3": [
+    [0, 0],
+    [1, 0],
+    [1, 1],
+    [0, -2],
+    [1, -2],
+  ],
+};
+
+const iKickTable = {
+  "0>1": [
+    [0, 0],
+    [-2, 0],
+    [1, 0],
+    [-2, -1],
+    [1, 2],
+  ],
+  "1>0": [
+    [0, 0],
+    [2, 0],
+    [-1, 0],
+    [2, 1],
+    [-1, -2],
+  ],
+  "1>2": [
+    [0, 0],
+    [-1, 0],
+    [2, 0],
+    [-1, 2],
+    [2, -1],
+  ],
+  "2>1": [
+    [0, 0],
+    [1, 0],
+    [-2, 0],
+    [1, -2],
+    [-2, 1],
+  ],
+  "2>3": [
+    [0, 0],
+    [2, 0],
+    [-1, 0],
+    [2, 1],
+    [-1, -2],
+  ],
+  "3>2": [
+    [0, 0],
+    [-2, 0],
+    [1, 0],
+    [-2, -1],
+    [1, 2],
+  ],
+  "3>0": [
+    [0, 0],
+    [1, 0],
+    [-2, 0],
+    [1, -2],
+    [-2, 1],
+  ],
+  "0>3": [
+    [0, 0],
+    [-1, 0],
+    [2, 0],
+    [-1, 2],
+    [2, -1],
+  ],
+};
+
 let board = createBoard();
 let piece = null;
 let nextQueue = [];
@@ -94,6 +212,7 @@ let lockStart = 0;
 let softDropActive = false;
 let particles = [];
 let clearSweeps = [];
+let notices = [];
 let touchState = null;
 
 function createBoard() {
@@ -115,6 +234,8 @@ function pieceFromType(type) {
     matrix: cloneMatrix(matrix),
     x: Math.floor(cols / 2) - Math.ceil(matrix[0].length / 2),
     y: 0,
+    rotation: 0,
+    tSpin: false,
   };
 }
 
@@ -156,6 +277,7 @@ function resetGame(modeKey = currentModeKey) {
   softDropActive = false;
   particles = [];
   clearSweeps = [];
+  notices = [];
   paused = false;
   gameOver = false;
   gameOverOverlay.hidden = true;
@@ -185,6 +307,10 @@ function collide(testPiece = piece) {
       return boardX < 0 || boardX >= cols || boardY >= rows || board[boardY]?.[boardX];
     }),
   );
+}
+
+function isCellBlocked(x, y) {
+  return x < 0 || x >= cols || y >= rows || Boolean(board[y]?.[x]);
 }
 
 function pieceCells(target = piece) {
@@ -230,7 +356,7 @@ function clearLines() {
     if (row.every(Boolean)) clearedRows.push(y);
   });
 
-  if (!clearedRows.length) return;
+  if (!clearedRows.length) return 0;
 
   clearedRows.forEach((row) => clearSweeps.push({ row, age: 0, duration: 430 }));
   board = board.filter((_, y) => !clearedRows.includes(y));
@@ -243,15 +369,24 @@ function clearLines() {
   score += [0, 100, 300, 500, 800][clearedRows.length] ?? clearedRows.length * 250;
   scoreLabel.textContent = String(score);
   linesLabel.textContent = String(lines);
+  return clearedRows.length;
 }
 
 function lockPiece() {
   if (!piece || gameOver) return;
   const landedCells = pieceCells();
   const landedColor = colors[piece.type];
+  const wasTSpin = piece.tSpin;
   mergePiece();
   spawnLockParticles(landedCells, landedColor);
-  clearLines();
+  const cleared = clearLines();
+
+  if (wasTSpin) {
+    score += cleared ? [0, 800, 1200, 1600, 2000][cleared] ?? cleared * 600 : 400;
+    scoreLabel.textContent = String(score);
+    notices.push({ text: cleared ? `T-SPIN x${cleared}` : "T-SPIN", age: 0, duration: 760 });
+  }
+
   piece = takeNextPiece();
   holdUsed = false;
   lockStart = 0;
@@ -270,15 +405,51 @@ function rotateMatrix(matrix, direction) {
   return matrix[0].map((_, index) => matrix.map((row) => row[row.length - 1 - index]));
 }
 
+function kickTableFor(target) {
+  if (target.type === "O") return [[0, 0]];
+  if (target.type === "I" && currentModeKey !== "arcade") return iKickTable;
+  return normalKickTable;
+}
+
+function kicksFor(target, from, to) {
+  const table = kickTableFor(target);
+  if (Array.isArray(table)) return table;
+  return table[`${from}>${to}`] ?? [[0, 0]];
+}
+
+function detectTSpin(target) {
+  if (target.type !== "T") return false;
+  const centerX = target.x + 1;
+  const centerY = target.y + 1;
+  const corners = [
+    [centerX - 1, centerY - 1],
+    [centerX + 1, centerY - 1],
+    [centerX - 1, centerY + 1],
+    [centerX + 1, centerY + 1],
+  ];
+
+  return corners.filter(([x, y]) => isCellBlocked(x, y)).length >= 3;
+}
+
 function rotatePiece(direction) {
   if (!piece || paused || gameOver) return;
   const rotated = rotateMatrix(piece.matrix, direction);
-  const offsets = [0, -1, 1, -2, 2];
+  const from = piece.rotation ?? 0;
+  const to = (from + (direction > 0 ? 1 : 3)) % 4;
 
-  for (const offset of offsets) {
-    const candidate = { ...piece, matrix: rotated, x: piece.x + offset };
+  for (const [dx, dy] of kicksFor(piece, from, to)) {
+    const candidate = {
+      ...piece,
+      matrix: rotated,
+      x: piece.x + dx,
+      y: piece.y + dy,
+      rotation: to,
+    };
     if (!collide(candidate)) {
-      piece = candidate;
+      piece = {
+        ...candidate,
+        tSpin: detectTSpin(candidate),
+      };
       lockStart = touchingGround() ? performance.now() : 0;
       return;
     }
@@ -289,7 +460,7 @@ function movePiece(dx) {
   if (!piece || paused || gameOver) return;
   const candidate = { ...piece, x: piece.x + dx };
   if (!collide(candidate)) {
-    piece = candidate;
+    piece = { ...candidate, tSpin: false };
     lockStart = touchingGround() ? performance.now() : 0;
   }
 }
@@ -299,7 +470,7 @@ function moveDown(forceLock = false) {
   const candidate = { ...piece, y: piece.y + 1 };
 
   if (!collide(candidate)) {
-    piece = candidate;
+    piece = { ...candidate, tSpin: false };
     lockStart = 0;
     return;
   }
@@ -314,10 +485,13 @@ function moveDown(forceLock = false) {
 
 function hardDrop() {
   if (!piece || paused || gameOver) return;
+  let dropped = 0;
   while (!collide({ ...piece, y: piece.y + 1 })) {
     piece.y += 1;
+    dropped += 1;
     score += 2;
   }
+  if (dropped) piece.tSpin = false;
   scoreLabel.textContent = String(score);
   lockPiece();
 }
@@ -435,6 +609,25 @@ function drawParticles(delta) {
   });
 }
 
+function drawNotices(delta) {
+  notices = notices.filter((notice) => {
+    notice.age += delta;
+    const t = Math.min(1, notice.age / notice.duration);
+    const alpha = Math.sin((1 - t) * Math.PI * 0.5);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "#f6d85a";
+    ctx.font = "900 28px Inter, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(0,0,0,0.7)";
+    ctx.shadowBlur = 8;
+    ctx.fillText(notice.text, canvas.width / 2, canvas.height * 0.42 - t * 30);
+    ctx.restore();
+    return notice.age < notice.duration;
+  });
+}
+
 function drawPreview(context, type, yOffset = 0) {
   if (!type) return;
   const matrix = activeShapes()[type];
@@ -474,6 +667,7 @@ function draw(delta = 0) {
 
   drawClearSweeps(delta);
   drawParticles(delta);
+  drawNotices(delta);
   drawPreviews();
 }
 
