@@ -21,6 +21,7 @@ const gameOverMenuButton = document.querySelector("#gameOverMenuButton");
 const resultTitle = document.querySelector("#resultTitle");
 const finalScoreLabel = document.querySelector("#finalScoreLabel");
 const finalLinesLabel = document.querySelector("#finalLinesLabel");
+const achievementBannerStack = document.querySelector("#achievementBannerStack");
 const achievementButton = document.querySelector("#achievementButton");
 const achievementsDialog = document.querySelector("#achievementsDialog");
 const achievementCloseButton = document.querySelector("#achievementCloseButton");
@@ -263,6 +264,7 @@ let touchState = null;
 let currentRunLines = 0;
 let selectedAchievementId = "";
 let playtimeUnsavedMs = 0;
+let pendingAchievementUnlocks = [];
 
 function createBoard() {
   return Array.from({ length: rows }, () => Array(cols).fill(""));
@@ -406,6 +408,7 @@ function checkAchievements() {
   achievements.forEach((definition) => {
     if (!achievementState.unlocked[definition.id] && achievementProgress(definition) >= definition.target) {
       achievementState.unlocked[definition.id] = new Date().toISOString();
+      pendingAchievementUnlocks.push(definition);
       changed = true;
     }
   });
@@ -514,6 +517,47 @@ function renderAchievements() {
 
   if (!selectedAchievementId) selectedAchievementId = achievements[0]?.id || "";
   renderAchievementDetail();
+}
+
+function clearAchievementBanners() {
+  achievementBannerStack.innerHTML = "";
+}
+
+function showAchievementBanners() {
+  clearAchievementBanners();
+
+  if (!pendingAchievementUnlocks.length) return;
+
+  const visibleUnlocks = pendingAchievementUnlocks.slice(0, 3);
+  const hiddenCount = pendingAchievementUnlocks.length - visibleUnlocks.length;
+
+  visibleUnlocks.forEach((definition) => {
+    const banner = document.createElement("div");
+    banner.className = "achievement-banner";
+    banner.innerHTML = `
+      <span>${definition.icon}</span>
+      <div>
+        <strong>Achievement Unlocked</strong>
+        <small>${definition.title}</small>
+      </div>
+    `;
+    achievementBannerStack.append(banner);
+  });
+
+  if (hiddenCount > 0) {
+    const banner = document.createElement("div");
+    banner.className = "achievement-banner achievement-banner-more";
+    banner.innerHTML = `
+      <span>+</span>
+      <div>
+        <strong>Achievement Unlocked</strong>
+        <small>ほか${hiddenCount}個の実績</small>
+      </div>
+    `;
+    achievementBannerStack.append(banner);
+  }
+
+  pendingAchievementUnlocks = [];
 }
 
 const achievements = buildAchievements();
@@ -659,6 +703,8 @@ function spawnNextPiece() {
 function resetGame(modeKey = currentModeKey) {
   currentModeKey = modeKey;
   const mode = currentMode();
+  pendingAchievementUnlocks = [];
+  clearAchievementBanners();
   board = createBoard();
   nextQueue = [];
   refillQueue();
@@ -1043,6 +1089,7 @@ function showResult(title) {
   finalScoreLabel.textContent = String(score);
   finalLinesLabel.textContent = String(lines);
   gameOverOverlay.hidden = false;
+  showAchievementBanners();
 }
 
 function endGame() {
@@ -1285,8 +1332,8 @@ function update(time = 0) {
 }
 
 function beginGame(modeKey) {
-  recordGameStart(modeKey);
   resetGame(modeKey);
+  recordGameStart(modeKey);
 }
 
 function startMode(modeKey) {
@@ -1297,6 +1344,8 @@ function startMode(modeKey) {
 
 function returnToTitle() {
   flushPlayTime();
+  pendingAchievementUnlocks = [];
+  clearAchievementBanners();
   paused = true;
   gameOver = false;
   resultTitle.textContent = "GAME OVER";
