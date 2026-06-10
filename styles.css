@@ -613,9 +613,8 @@ h1 {
   aspect-ratio: 1;
   display: grid;
   place-items: center;
-  gap: 3px;
   min-width: 0;
-  padding: 6px 3px;
+  padding: 6px;
   border: 1px solid rgba(221, 246, 255, 0.14);
   border-radius: 8px;
   background: rgba(7, 24, 39, 0.54);
@@ -632,8 +631,9 @@ h1 {
 }
 
 .achievement-icon {
-  width: 32px;
-  height: 32px;
+  width: min(70%, 42px);
+  height: auto;
+  aspect-ratio: 1;
   display: grid;
   place-items: center;
   border-radius: 8px;
@@ -648,14 +648,11 @@ h1 {
 }
 
 .achievement-card-title {
-  width: 100%;
+  position: absolute;
+  width: 1px;
+  height: 1px;
   overflow: hidden;
-  color: inherit;
-  font-size: 0.52rem;
-  font-weight: 900;
-  line-height: 1.1;
-  text-align: center;
-  text-overflow: ellipsis;
+  clip-path: inset(50%);
   white-space: nowrap;
 }
 
