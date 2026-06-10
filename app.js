@@ -9,7 +9,7 @@ const nextCanvas = document.querySelector("#nextCanvas");
 const nextCtx = nextCanvas.getContext("2d");
 const modeLabel = document.querySelector("#modeLabel");
 const scoreLabel = document.querySelector("#scoreLabel");
-const goalLabel = document.querySelector("#goalLabel");
+const linesLabel = document.querySelector("#linesLabel");
 const optionButton = document.querySelector("#optionButton");
 const optionsDialog = document.querySelector("#optionsDialog");
 const resumeButton = document.querySelector("#resumeButton");
@@ -161,7 +161,7 @@ function resetGame(modeKey = currentModeKey) {
   gameOverOverlay.hidden = true;
   modeLabel.textContent = mode.label;
   scoreLabel.textContent = String(score);
-  goalLabel.textContent = mode.goal ? String(mode.goal) : "--";
+  linesLabel.textContent = String(lines);
 
   if (mode.seedGarbage) {
     for (let y = rows - 3; y < rows; y += 1) {
@@ -242,6 +242,7 @@ function clearLines() {
   lines += clearedRows.length;
   score += [0, 100, 300, 500, 800][clearedRows.length] ?? clearedRows.length * 250;
   scoreLabel.textContent = String(score);
+  linesLabel.textContent = String(lines);
 }
 
 function lockPiece() {

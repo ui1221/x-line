@@ -40,7 +40,13 @@
       </section>
 
       <section class="screen screen-game" id="gameScreen">
-        <button class="pause-chip" id="optionButton" type="button" aria-label="オプション">Pause</button>
+        <div class="game-topbar">
+          <button class="pause-chip" id="optionButton" type="button" aria-label="オプション">Pause</button>
+          <div class="score-chip" aria-label="スコア">
+            <span>Score</span>
+            <strong id="scoreLabel">0</strong>
+          </div>
+        </div>
 
         <div class="game-stage" id="gameStage">
           <aside class="side-panel hold-panel" aria-label="ホールド">
@@ -49,9 +55,6 @@
           </aside>
 
           <div class="playfield-shell">
-            <div class="top-score">
-              <span id="scoreLabel">0</span>
-            </div>
             <canvas id="gameCanvas" width="300" height="600" aria-label="ゲーム画面"></canvas>
             <div class="level-ribbon">
               <span id="modeLabel">Classic</span>
@@ -63,9 +66,9 @@
             <canvas id="nextCanvas" width="96" height="156"></canvas>
           </aside>
 
-          <div class="goal-panel" aria-label="ゴール">
-            <span>Goal</span>
-            <strong id="goalLabel">--</strong>
+          <div class="lines-panel" aria-label="合計ライン数">
+            <span>Lines</span>
+            <strong id="linesLabel">0</strong>
           </div>
         </div>
 
