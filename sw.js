@@ -1,4 +1,4 @@
-const cacheName = "x-line-pwa-v26";
+const cacheName = "x-line-pwa-v27";
 const assets = [
   ".",
   "index.html",
@@ -10,6 +10,7 @@ const assets = [
   "icons/favicon-192.png",
   "icons/icon-192.png",
   "icons/icon-512.png",
+  "assets/achievements/play-days.png",
   "assets/modes/endless.png",
   "assets/modes/lines200.png",
   "assets/modes/cleanup.png",

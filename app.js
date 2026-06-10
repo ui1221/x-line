@@ -49,7 +49,7 @@ const modeAchievementLabels = {
   longLine: { label: "Long Line", icon: "L", image: "assets/modes/longline.png" },
 };
 const achievementImages = {
-  days: "assets/modes/endless.png",
+  days: "assets/achievements/play-days.png",
   lines: "assets/modes/lines200.png",
   cleanup: "assets/modes/cleanup.png",
   zero: "assets/modes/cleanup.png",
