@@ -54,22 +54,27 @@ const shapes = {
   T: [
     [0, 1, 0],
     [1, 1, 1],
+    [0, 0, 0],
   ],
   S: [
     [0, 1, 1],
     [1, 1, 0],
+    [0, 0, 0],
   ],
   Z: [
     [1, 1, 0],
     [0, 1, 1],
+    [0, 0, 0],
   ],
   J: [
     [1, 0, 0],
     [1, 1, 1],
+    [0, 0, 0],
   ],
   L: [
     [0, 0, 1],
     [1, 1, 1],
+    [0, 0, 0],
   ],
 };
 
@@ -82,58 +87,58 @@ const normalKickTable = {
   "0>1": [
     [0, 0],
     [-1, 0],
-    [-1, 1],
-    [0, -2],
-    [-1, -2],
+    [-1, -1],
+    [0, 2],
+    [-1, 2],
   ],
   "1>0": [
     [0, 0],
     [1, 0],
-    [1, -1],
-    [0, 2],
-    [1, 2],
+    [1, 1],
+    [0, -2],
+    [1, -2],
   ],
   "1>2": [
+    [0, 0],
+    [1, 0],
+    [1, 1],
+    [0, -2],
+    [1, -2],
+  ],
+  "2>1": [
+    [0, 0],
+    [-1, 0],
+    [-1, -1],
+    [0, 2],
+    [-1, 2],
+  ],
+  "2>3": [
     [0, 0],
     [1, 0],
     [1, -1],
     [0, 2],
     [1, 2],
   ],
-  "2>1": [
+  "3>2": [
     [0, 0],
     [-1, 0],
     [-1, 1],
     [0, -2],
     [-1, -2],
   ],
-  "2>3": [
-    [0, 0],
-    [1, 0],
-    [1, 1],
-    [0, -2],
-    [1, -2],
-  ],
-  "3>2": [
-    [0, 0],
-    [-1, 0],
-    [-1, -1],
-    [0, 2],
-    [-1, 2],
-  ],
   "3>0": [
     [0, 0],
     [-1, 0],
-    [-1, -1],
-    [0, 2],
-    [-1, 2],
+    [-1, 1],
+    [0, -2],
+    [-1, -2],
   ],
   "0>3": [
     [0, 0],
     [1, 0],
-    [1, 1],
-    [0, -2],
-    [1, -2],
+    [1, -1],
+    [0, 2],
+    [1, 2],
   ],
 };
 
@@ -142,57 +147,57 @@ const iKickTable = {
     [0, 0],
     [-2, 0],
     [1, 0],
-    [-2, -1],
-    [1, 2],
+    [-2, 1],
+    [1, -2],
   ],
   "1>0": [
     [0, 0],
     [2, 0],
     [-1, 0],
-    [2, 1],
-    [-1, -2],
+    [2, -1],
+    [-1, 2],
   ],
   "1>2": [
     [0, 0],
     [-1, 0],
     [2, 0],
-    [-1, 2],
-    [2, -1],
+    [-1, -2],
+    [2, 1],
   ],
   "2>1": [
     [0, 0],
     [1, 0],
     [-2, 0],
-    [1, -2],
-    [-2, 1],
+    [1, 2],
+    [-2, -1],
   ],
   "2>3": [
     [0, 0],
     [2, 0],
     [-1, 0],
-    [2, 1],
-    [-1, -2],
+    [2, -1],
+    [-1, 2],
   ],
   "3>2": [
     [0, 0],
     [-2, 0],
     [1, 0],
-    [-2, -1],
-    [1, 2],
+    [-2, 1],
+    [1, -2],
   ],
   "3>0": [
     [0, 0],
     [1, 0],
     [-2, 0],
-    [1, -2],
-    [-2, 1],
+    [1, 2],
+    [-2, -1],
   ],
   "0>3": [
     [0, 0],
     [-1, 0],
     [2, 0],
-    [-1, 2],
-    [2, -1],
+    [-1, -2],
+    [2, 1],
   ],
 };
 
@@ -631,15 +636,26 @@ function drawNotices(delta) {
 function drawPreview(context, type, yOffset = 0) {
   if (!type) return;
   const matrix = activeShapes()[type];
-  const width = matrix[0].length * previewCell;
-  const height = matrix.length * previewCell;
+  const filled = matrix.flatMap((row, y) =>
+    row.map((value, x) => (value ? { x, y } : null)).filter(Boolean),
+  );
+  const minX = Math.min(...filled.map((cell) => cell.x));
+  const maxX = Math.max(...filled.map((cell) => cell.x));
+  const minY = Math.min(...filled.map((cell) => cell.y));
+  const maxY = Math.max(...filled.map((cell) => cell.y));
+  const width = (maxX - minX + 1) * previewCell;
+  const height = (maxY - minY + 1) * previewCell;
   const startX = Math.floor((context.canvas.width - width) / 2);
   const startY = yOffset + Math.floor((52 - height) / 2);
 
-  matrix.forEach((row, y) => {
-    row.forEach((value, x) => {
-      if (value) drawBlock(context, startX + x * previewCell, startY + y * previewCell, previewCell, colors[type]);
-    });
+  filled.forEach(({ x, y }) => {
+    drawBlock(
+      context,
+      startX + (x - minX) * previewCell,
+      startY + (y - minY) * previewCell,
+      previewCell,
+      colors[type],
+    );
   });
 }
 
