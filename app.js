@@ -552,26 +552,40 @@ gameStage.addEventListener("pointerdown", (event) => {
     startX: event.clientX,
     startY: event.clientY,
     lastX: event.clientX,
+    horizontalActive: false,
     moved: false,
   };
 });
 
 gameStage.addEventListener("pointermove", (event) => {
   if (!touchState || event.pointerId !== touchState.id || paused || gameOver) return;
-  const dx = event.clientX - touchState.lastX;
+  const totalX = event.clientX - touchState.startX;
   const totalDy = event.clientY - touchState.startY;
-  const stepPx = 28;
+  const absTotalX = Math.abs(totalX);
+  const absTotalY = Math.abs(totalDy);
+  const startThresholdPx = 42;
+  const stepPx = 30;
 
-  if (Math.abs(dx) >= stepPx) {
+  if (!touchState.horizontalActive && absTotalX >= startThresholdPx && absTotalX > absTotalY * 1.15) {
+    touchState.horizontalActive = true;
+    touchState.lastX = touchState.startX + Math.sign(totalX) * startThresholdPx;
+    movePiece(Math.sign(totalX));
+    touchState.moved = true;
+  }
+
+  if (touchState.horizontalActive) {
+    const dx = event.clientX - touchState.lastX;
     const steps = Math.trunc(dx / stepPx);
     for (let i = 0; i < Math.abs(steps); i += 1) {
       movePiece(Math.sign(steps));
     }
-    touchState.lastX += steps * stepPx;
-    touchState.moved = true;
+    if (steps) {
+      touchState.lastX += steps * stepPx;
+      touchState.moved = true;
+    }
   }
 
-  softDropActive = totalDy > 18;
+  softDropActive = totalDy > 22 && absTotalY > absTotalX * 0.85;
   if (softDropActive) touchState.moved = true;
 });
 
