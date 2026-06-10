@@ -1469,7 +1469,7 @@ gameStage.addEventListener("pointermove", (event) => {
   const totalDy = event.clientY - touchState.startY;
   const absTotalX = Math.abs(totalX);
   const absTotalY = Math.abs(totalDy);
-  const startThresholdPx = 42;
+  const startThresholdPx = 34;
   const stepPx = 30;
 
   if (!touchState.horizontalActive && absTotalX >= startThresholdPx && absTotalX > absTotalY * 1.15) {
