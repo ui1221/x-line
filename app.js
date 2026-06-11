@@ -80,6 +80,7 @@ const blastHighStackRate = 0.5;
 const blastLineGain = 2;
 const blastHardDropGain = 0.08;
 const blastSoftDropGain = 0.05;
+const blastGaugeWarningThreshold = 80;
 const pieceTypes = ["I", "O", "T", "S", "Z", "J", "L"];
 const levelSpeedCurve = [
   820, 760, 700, 640, 590, 540, 500, 460, 430, 400,
@@ -649,6 +650,7 @@ function updateBlastGauge() {
   blastGauge.hidden = !active;
   blastGaugeFill.style.height = `${Math.max(0, Math.min(100, blastCharge))}%`;
   blastGaugeLabel.textContent = `${Math.floor(blastCharge)}%`;
+  blastGauge.classList.toggle("is-ready", active && blastCharge >= blastGaugeWarningThreshold);
   blastGauge.classList.toggle("is-full", active && blastCharge >= 100);
 }
 

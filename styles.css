@@ -374,23 +374,36 @@ h1 {
   pointer-events: none;
 }
 
-.blast-gauge.is-full {
+.blast-gauge.is-ready {
   border-color: #fff1a8;
   box-shadow:
     inset 0 2px 0 rgba(255, 255, 255, 0.22),
-    0 0 0 2px rgba(255, 241, 168, 0.35),
-    0 0 22px rgba(255, 178, 56, 0.72),
+    0 0 0 2px rgba(255, 241, 168, 0.24),
+    0 0 18px rgba(255, 178, 56, 0.52),
     0 8px 18px rgba(0, 0, 0, 0.32);
 }
 
+.blast-gauge.is-full {
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.28),
+    0 0 0 2px rgba(255, 241, 168, 0.46),
+    0 0 28px rgba(255, 178, 56, 0.9),
+    0 8px 18px rgba(0, 0, 0, 0.32);
+}
+
+.blast-gauge.is-ready::after,
 .blast-gauge.is-full::after,
 .blast-gauge.is-firing::after {
   opacity: 1;
   transform: scale(1);
 }
 
-.blast-gauge.is-full .blast-gauge-fill {
+.blast-gauge.is-ready .blast-gauge-fill {
   animation: blastGaugePulse 760ms ease-in-out infinite alternate;
+}
+
+.blast-gauge.is-ready strong {
+  color: #fff7c8;
 }
 
 .blast-gauge.is-firing {
