@@ -649,6 +649,28 @@ function updateBlastGauge() {
   blastGauge.hidden = !active;
   blastGaugeFill.style.height = `${Math.max(0, Math.min(100, blastCharge))}%`;
   blastGaugeLabel.textContent = `${Math.floor(blastCharge)}%`;
+  blastGauge.classList.toggle("is-full", active && blastCharge >= 100);
+}
+
+function showBlastGaugeBurst() {
+  if (!blastGauge || blastGauge.hidden) return;
+  blastGauge.classList.remove("is-firing");
+  void blastGauge.offsetWidth;
+  blastGauge.classList.add("is-firing");
+
+  for (let i = 0; i < 16; i += 1) {
+    const spark = document.createElement("span");
+    const angle = (Math.PI * 2 * i) / 16 + Math.random() * 0.28;
+    const distance = 26 + Math.random() * 18;
+    spark.className = "blast-gauge-spark";
+    spark.style.setProperty("--spark-x", `${Math.cos(angle) * distance}px`);
+    spark.style.setProperty("--spark-y", `${Math.sin(angle) * distance}px`);
+    spark.style.animationDelay = `${Math.random() * 80}ms`;
+    blastGauge.append(spark);
+    window.setTimeout(() => spark.remove(), 760);
+  }
+
+  window.setTimeout(() => blastGauge.classList.remove("is-firing"), 520);
 }
 
 function stackIsAboveHalf() {
@@ -736,6 +758,7 @@ function blastBottomRows() {
 function triggerBlastEffect() {
   if (!currentMode().blast) return;
   recordBlastGaugeFill();
+  showBlastGaugeBurst();
   blastCharge = 0;
   updateBlastGauge();
 
