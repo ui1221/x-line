@@ -57,7 +57,7 @@ const achievementImages = {
   days: "assets/achievements/play-days.png",
   lines: "assets/modes/lines200.png",
   cleanup: "assets/modes/cleanup.png",
-  zero: "assets/modes/cleanup.png",
+  zero: "",
 };
 const achievementStorageKey = "x-line-achievements-v1";
 const playDayAchievementTiers = [1, 3, 7, 15, 30, 60, 77, 100];
@@ -326,7 +326,7 @@ function buildAchievements() {
       id: `cleanup_lines_${tier}`,
       icon: "CL",
       title: `Clean ${tier}`,
-      description: `お邪魔ブロックを含むラインを${tier}回消す`,
+      description: `お邪魔ブロックを含むラインを${tier}ライン消す`,
       metric: "cleanupLines",
       target: tier,
       image: achievementImages.cleanup,
@@ -335,8 +335,8 @@ function buildAchievements() {
     ...blastGaugeAchievementTiers.map((tier) => ({
       id: `blast_gauge_${tier}`,
       icon: "B",
-      title: `Blast x${tier}`,
-      description: `Blast gaugeを${tier}回ためる`,
+      title: `Blast Gauge x${tier}`,
+      description: `Blastゲージを${tier}回ためる`,
       metric: "blastGaugeFills",
       target: tier,
       image: modeAchievementLabels.blast.image,
@@ -600,8 +600,13 @@ function showAchievementBanners() {
   visibleUnlocks.forEach((definition) => {
     const banner = document.createElement("div");
     banner.className = "achievement-banner";
+    if (definition.image) {
+      banner.style.setProperty("--achievement-image", `url("${definition.image}")`);
+    }
     banner.innerHTML = `
-      <span>${definition.icon}</span>
+      <span class="achievement-banner-icon${definition.image ? " has-image" : ""}">
+        <span class="achievement-badge">${definition.badge || definition.icon}</span>
+      </span>
       <div>
         <strong>Achievement Unlocked</strong>
         <small>${definition.title}</small>

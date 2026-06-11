@@ -1,4 +1,4 @@
-const cacheName = "x-line-pwa-v33";
+const cacheName = "x-line-pwa-v34";
 const assets = [
   ".",
   "index.html",
