@@ -19,9 +19,10 @@
   <body>
     <main class="app-shell" aria-live="polite">
       <section class="screen screen-title is-active" id="titleScreen">
-        <button class="achievement-button" id="achievementButton" type="button" aria-label="実績">
-          Awards
-        </button>
+        <div class="title-actions">
+          <button class="title-chip" id="achievementButton" type="button" aria-label="実績">Awards</button>
+          <button class="title-chip" id="titleOptionsButton" type="button" aria-label="設定">Options</button>
+        </div>
 
         <div class="brand-block">
           <p class="kicker">Mobile falling puzzle</p>
@@ -140,6 +141,30 @@
           <span>音量</span>
           <input id="volumeInput" type="range" min="0" max="100" value="60">
         </label>
+
+        <fieldset class="color-options" aria-label="ミノの色">
+          <legend>ミノの色</legend>
+          <label>
+            <input type="radio" name="colorScheme" value="classic">
+            <span class="color-swatch-row" aria-hidden="true">
+              <i style="--swatch:#53d7d2"></i>
+              <i style="--swatch:#f6d85a"></i>
+              <i style="--swatch:#a679d8"></i>
+              <i style="--swatch:#68c96b"></i>
+            </span>
+            <strong>Classic</strong>
+          </label>
+          <label>
+            <input type="radio" name="colorScheme" value="colorA">
+            <span class="color-swatch-row" aria-hidden="true">
+              <i style="--swatch:#56b4e9"></i>
+              <i style="--swatch:#f0e442"></i>
+              <i style="--swatch:#cc79a7"></i>
+              <i style="--swatch:#009e73"></i>
+            </span>
+            <strong>Color A</strong>
+          </label>
+        </fieldset>
 
         <div class="option-actions">
           <button id="resumeButton" type="button">ゲームに戻る</button>

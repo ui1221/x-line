@@ -13,8 +13,10 @@ const linesLabel = document.querySelector("#linesLabel");
 const blastGauge = document.querySelector("#blastGauge");
 const blastGaugeFill = document.querySelector("#blastGaugeFill");
 const blastGaugeLabel = document.querySelector("#blastGaugeLabel");
+const titleOptionsButton = document.querySelector("#titleOptionsButton");
 const optionButton = document.querySelector("#optionButton");
 const optionsDialog = document.querySelector("#optionsDialog");
+const colorSchemeInputs = document.querySelectorAll("input[name='colorScheme']");
 const resumeButton = document.querySelector("#resumeButton");
 const restartButton = document.querySelector("#restartButton");
 const quitButton = document.querySelector("#quitButton");
@@ -60,6 +62,7 @@ const achievementImages = {
   zero: "assets/achievements/zero-clear.png",
 };
 const achievementStorageKey = "x-line-achievements-v1";
+const colorSchemeStorageKey = "x-line-color-scheme-v1";
 const playDayAchievementTiers = [1, 3, 7, 15, 30, 60, 77, 100];
 const modePlayAchievementTiers = [1, 3, 5, 10, 20, 30, 40, 50];
 const totalLineAchievementTiers = [1, 10, 25, 50, 100, 250, 500, 1000, 2000, 3000, 5000, 7500, 9999];
@@ -91,17 +94,39 @@ const blastLevelSpeedCurve = [
   430, 410, 390, 370, 350, 335, 320, 305, 290, 275,
 ];
 
-const colors = {
-  I: "#53d7d2",
-  O: "#f6d85a",
-  T: "#a679d8",
-  S: "#68c96b",
-  Z: "#e4666d",
-  J: "#5f83d7",
-  L: "#e79a4f",
-  G: "#8b98a4",
-  B: "#ffb238",
+const colorSchemes = {
+  classic: {
+    label: "Classic",
+    colors: {
+      I: "#53d7d2",
+      O: "#f6d85a",
+      T: "#a679d8",
+      S: "#68c96b",
+      Z: "#e4666d",
+      J: "#5f83d7",
+      L: "#e79a4f",
+      G: "#8b98a4",
+      B: "#ffb238",
+    },
+  },
+  colorA: {
+    label: "Color A",
+    colors: {
+      I: "#56b4e9",
+      O: "#f0e442",
+      T: "#cc79a7",
+      S: "#009e73",
+      Z: "#d55e00",
+      J: "#0072b2",
+      L: "#e69f00",
+      G: "#8b98a4",
+      B: "#ffb238",
+    },
+  },
 };
+
+let currentColorSchemeKey = loadColorSchemeKey();
+let colors = colorSchemes[currentColorSchemeKey].colors;
 
 const shapes = {
   I: [[1, 1, 1, 1]],
@@ -298,6 +323,38 @@ function createBoard() {
 
 function cloneMatrix(matrix) {
   return matrix.map((row) => [...row]);
+}
+
+function loadColorSchemeKey() {
+  try {
+    const saved = localStorage.getItem(colorSchemeStorageKey);
+    return colorSchemes[saved] ? saved : "classic";
+  } catch {
+    return "classic";
+  }
+}
+
+function updateColorSchemeInputs() {
+  colorSchemeInputs.forEach((input) => {
+    input.checked = input.value === currentColorSchemeKey;
+  });
+}
+
+function applyColorScheme(key, save = true) {
+  if (!colorSchemes[key]) return;
+  currentColorSchemeKey = key;
+  colors = colorSchemes[key].colors;
+  updateColorSchemeInputs();
+
+  if (save) {
+    try {
+      localStorage.setItem(colorSchemeStorageKey, key);
+    } catch {
+      // The selected palette still applies for this session if storage is unavailable.
+    }
+  }
+
+  draw(0);
 }
 
 function buildAchievements() {
@@ -1690,11 +1747,17 @@ achievementCloseButton.addEventListener("click", () => {
   achievementsDialog.close();
 });
 
+titleOptionsButton.addEventListener("click", () => {
+  optionsDialog.dataset.context = "title";
+  optionsDialog.showModal();
+});
+
 optionButton.addEventListener("click", () => {
   if (gameOver) return;
   flushPlayTime();
   paused = true;
   softDropActive = false;
+  optionsDialog.dataset.context = "game";
   optionsDialog.showModal();
 });
 
@@ -1707,6 +1770,12 @@ optionsDialog.addEventListener("close", () => {
 resumeButton.addEventListener("click", () => {
   paused = false;
   optionsDialog.close();
+});
+
+colorSchemeInputs.forEach((input) => {
+  input.addEventListener("change", () => {
+    if (input.checked) applyColorScheme(input.value);
+  });
 });
 
 restartButton.addEventListener("click", () => {
@@ -1836,5 +1905,6 @@ if ("serviceWorker" in navigator) {
 
 resetGame("endless");
 paused = true;
+updateColorSchemeInputs();
 renderAchievements();
 requestAnimationFrame(update);
