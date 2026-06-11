@@ -1,4 +1,4 @@
-const cacheName = "x-line-pwa-v38";
+const cacheName = "x-line-pwa-v39";
 const assets = [
   ".",
   "index.html",
@@ -10,13 +10,13 @@ const assets = [
   "icons/favicon-192.png",
   "icons/icon-192.png",
   "icons/icon-512.png",
-  "assets/achievements/play-days.png",
-  "assets/achievements/zero-clear.png",
-  "assets/modes/endless.png",
-  "assets/modes/lines200.png",
-  "assets/modes/cleanup.png",
-  "assets/modes/longline.png",
-  "assets/modes/blast.png",
+  "assets/achievements/play-days.webp",
+  "assets/achievements/zero-clear.webp",
+  "assets/modes/endless.webp",
+  "assets/modes/lines200.webp",
+  "assets/modes/cleanup.webp",
+  "assets/modes/longline.webp",
+  "assets/modes/blast.webp",
 ];
 
 self.addEventListener("install", (event) => {

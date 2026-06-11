@@ -50,17 +50,17 @@ const modes = {
 };
 
 const modeAchievementLabels = {
-  endless: { label: "Endless", icon: "E", image: "assets/modes/endless.png" },
-  lines200: { label: "200 Lines", icon: "200", image: "assets/modes/lines200.png" },
-  cleanup: { label: "Clean Up", icon: "C", image: "assets/modes/cleanup.png" },
-  longLine: { label: "Long Line", icon: "L", image: "assets/modes/longline.png" },
-  blast: { label: "Blast", icon: "B", image: "assets/modes/blast.png" },
+  endless: { label: "Endless", icon: "E", image: "assets/modes/endless.webp" },
+  lines200: { label: "200 Lines", icon: "200", image: "assets/modes/lines200.webp" },
+  cleanup: { label: "Clean Up", icon: "C", image: "assets/modes/cleanup.webp" },
+  longLine: { label: "Long Line", icon: "L", image: "assets/modes/longline.webp" },
+  blast: { label: "Blast", icon: "B", image: "assets/modes/blast.webp" },
 };
 const achievementImages = {
-  days: "assets/achievements/play-days.png",
-  lines: "assets/modes/lines200.png",
-  cleanup: "assets/modes/cleanup.png",
-  zero: "assets/achievements/zero-clear.png",
+  days: "assets/achievements/play-days.webp",
+  lines: "assets/modes/lines200.webp",
+  cleanup: "assets/modes/cleanup.webp",
+  zero: "assets/achievements/zero-clear.webp",
 };
 const achievementStorageKey = "x-line-achievements-v1";
 const colorSchemeStorageKey = "x-line-color-scheme-v1";
