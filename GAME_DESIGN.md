@@ -23,7 +23,7 @@
 - Tミノは回転補正により、Tスピン的な隙間入りをしやすくしている。
 - Tスピン、Back-to-Back、コンボ、Perfect Clearはスコア演出として扱う。
 - ゲームオーバー/クリア時は盤面を残したまま結果オーバーレイを表示する。
-- ミノ色は設定で切り替え可能。`Classic` は従来色、`Color A` は色覚多様性に配慮したOkabe-Ito系パレット。
+- ミノ色は設定で切り替え可能。`Color A` はOkabe-Ito系、`Color B` はPaul Tol系、`Color C` は明るめ調整、`Color D` は従来色。
 
 ## 操作
 

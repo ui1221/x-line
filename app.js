@@ -95,20 +95,6 @@ const blastLevelSpeedCurve = [
 ];
 
 const colorSchemes = {
-  classic: {
-    label: "Classic",
-    colors: {
-      I: "#53d7d2",
-      O: "#f6d85a",
-      T: "#a679d8",
-      S: "#68c96b",
-      Z: "#e4666d",
-      J: "#5f83d7",
-      L: "#e79a4f",
-      G: "#8b98a4",
-      B: "#ffb238",
-    },
-  },
   colorA: {
     label: "Color A",
     colors: {
@@ -119,6 +105,48 @@ const colorSchemes = {
       Z: "#d55e00",
       J: "#0072b2",
       L: "#e69f00",
+      G: "#8b98a4",
+      B: "#ffb238",
+    },
+  },
+  colorB: {
+    label: "Color B",
+    colors: {
+      I: "#66ccee",
+      O: "#ccbb44",
+      T: "#aa3377",
+      S: "#228833",
+      Z: "#ee6677",
+      J: "#4477aa",
+      L: "#ee7733",
+      G: "#8b98a4",
+      B: "#ffb238",
+    },
+  },
+  colorC: {
+    label: "Color C",
+    colors: {
+      I: "#7ad7f0",
+      O: "#e6d84f",
+      T: "#c678b8",
+      S: "#32b56b",
+      Z: "#f06b6b",
+      J: "#4c8fd9",
+      L: "#f39b3d",
+      G: "#8b98a4",
+      B: "#ffb238",
+    },
+  },
+  colorD: {
+    label: "Color D",
+    colors: {
+      I: "#53d7d2",
+      O: "#f6d85a",
+      T: "#a679d8",
+      S: "#68c96b",
+      Z: "#e4666d",
+      J: "#5f83d7",
+      L: "#e79a4f",
       G: "#8b98a4",
       B: "#ffb238",
     },
@@ -328,9 +356,10 @@ function cloneMatrix(matrix) {
 function loadColorSchemeKey() {
   try {
     const saved = localStorage.getItem(colorSchemeStorageKey);
-    return colorSchemes[saved] ? saved : "classic";
+    if (saved === "classic") return "colorD";
+    return colorSchemes[saved] ? saved : "colorA";
   } catch {
-    return "classic";
+    return "colorA";
   }
 }
 
