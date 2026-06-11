@@ -57,7 +57,7 @@ const achievementImages = {
   days: "assets/achievements/play-days.png",
   lines: "assets/modes/lines200.png",
   cleanup: "assets/modes/cleanup.png",
-  zero: "",
+  zero: "assets/achievements/zero-clear.png",
 };
 const achievementStorageKey = "x-line-achievements-v1";
 const playDayAchievementTiers = [1, 3, 7, 15, 30, 60, 77, 100];
