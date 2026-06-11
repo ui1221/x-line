@@ -43,7 +43,7 @@ const modes = {
   lines200: { label: "200 Lines", baseDropMs: 820, seedGarbage: false, targetLines: 200, usesLevel: true },
   cleanup: { label: "Clean Up", baseDropMs: 700, cleanup: true, targetLines: null, usesLevel: false },
   longLine: { label: "Long Line", baseDropMs: 620, seedGarbage: false, targetLines: null, usesLevel: false },
-  blast: { label: "Blast", baseDropMs: 700, blast: true, targetLines: null, usesLevel: false },
+  blast: { label: "Blast", baseDropMs: 700, blast: true, targetLines: null, usesLevel: true, speedCurve: "blast" },
 };
 
 const modeAchievementLabels = {
@@ -85,6 +85,10 @@ const pieceTypes = ["I", "O", "T", "S", "Z", "J", "L"];
 const levelSpeedCurve = [
   820, 760, 700, 640, 590, 540, 500, 460, 430, 400,
   380, 360, 340, 320, 300, 285, 270, 255, 240, 225,
+];
+const blastLevelSpeedCurve = [
+  700, 670, 640, 610, 580, 550, 525, 500, 475, 450,
+  430, 410, 390, 370, 350, 335, 320, 305, 290, 275,
 ];
 
 const colors = {
@@ -642,7 +646,8 @@ function updateLevel() {
 function currentDropMs() {
   const mode = currentMode();
   if (!mode.usesLevel) return mode.baseDropMs;
-  return levelSpeedCurve[Math.min(level - 1, levelSpeedCurve.length - 1)];
+  const speedCurve = mode.speedCurve === "blast" ? blastLevelSpeedCurve : levelSpeedCurve;
+  return speedCurve[Math.min(level - 1, speedCurve.length - 1)];
 }
 
 function updateBlastGauge() {
