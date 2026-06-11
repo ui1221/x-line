@@ -44,7 +44,7 @@ const achievementDetailMeta = document.querySelector("#achievementDetailMeta");
 const modes = {
   endless: { label: "Endless", baseDropMs: 820, seedGarbage: false, targetLines: null, usesLevel: true },
   lines200: { label: "200 Lines", baseDropMs: 820, seedGarbage: false, targetLines: 200, usesLevel: true },
-  cleanup: { label: "Clean Up", baseDropMs: 700, cleanup: true, targetLines: null, usesLevel: false },
+  cleanup: { label: "Clean Up", baseDropMs: 700, cleanup: true, targetLines: null, usesLevel: true, fixedSpeed: true },
   longLine: { label: "Long Line", baseDropMs: 620, seedGarbage: false, targetLines: null, usesLevel: false },
   blast: { label: "Blast", baseDropMs: 700, blast: true, targetLines: null, usesLevel: true, speedCurve: "blast" },
 };
@@ -877,12 +877,13 @@ function currentMode() {
 
 function updateLevel() {
   const mode = currentMode();
-  level = mode.usesLevel ? Math.floor(lines / 10) + 1 : 1;
+  if (mode.usesLevel && !mode.cleanup) level = Math.floor(lines / 10) + 1;
   modeLabel.textContent = mode.usesLevel ? `${mode.label} Lv ${level}` : mode.label;
 }
 
 function currentDropMs() {
   const mode = currentMode();
+  if (mode.fixedSpeed) return mode.baseDropMs;
   if (!mode.usesLevel) return mode.baseDropMs;
   const speedCurve = mode.speedCurve === "blast" ? blastLevelSpeedCurve : levelSpeedCurve;
   return speedCurve[Math.min(level - 1, speedCurve.length - 1)];
@@ -1060,6 +1061,52 @@ function addCleanupRows(count) {
   }
 
   return true;
+}
+
+function weightedPick(entries) {
+  const totalWeight = entries.reduce((sum, entry) => sum + entry.weight, 0);
+  let roll = Math.random() * totalWeight;
+
+  for (const entry of entries) {
+    roll -= entry.weight;
+    if (roll <= 0) return entry.value;
+  }
+
+  return entries[entries.length - 1].value;
+}
+
+function cleanupRiseRowsForLevel(cleanupLevel) {
+  if (cleanupLevel <= 2) {
+    return 2;
+  }
+
+  if (cleanupLevel <= 5) {
+    return weightedPick([
+      { value: 2, weight: 4 },
+      { value: 3, weight: 1 },
+    ]);
+  }
+
+  if (cleanupLevel <= 8) {
+    return weightedPick([
+      { value: 2, weight: 2 },
+      { value: 3, weight: 3 },
+    ]);
+  }
+
+  if (cleanupLevel <= 12) {
+    return weightedPick([
+      { value: 2, weight: 1 },
+      { value: 3, weight: 4 },
+      { value: 4, weight: 1 },
+    ]);
+  }
+
+  return weightedPick([
+    { value: 3, weight: 4 },
+    { value: 4, weight: 3 },
+    { value: 5, weight: 1 },
+  ]);
 }
 
 function seedCleanupRows(count) {
@@ -1358,10 +1405,13 @@ function finishLineClearDelay() {
 }
 
 function startCleanupRiseDelay() {
+  level += 1;
+  const rowCount = cleanupRiseRowsForLevel(level);
+  updateLevel();
   score += 500;
   scoreLabel.textContent = String(score);
   notices.push({ text: "CLEAN", age: 0, duration: 840 });
-  pendingCleanupRise = { age: 0, duration: cleanupRiseDelayMs, rows: 2 };
+  pendingCleanupRise = { age: 0, duration: cleanupRiseDelayMs, rows: rowCount };
   piece = null;
   softDropActive = false;
 }
