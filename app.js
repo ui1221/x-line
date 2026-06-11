@@ -16,6 +16,7 @@ const blastGaugeLabel = document.querySelector("#blastGaugeLabel");
 const titleOptionsButton = document.querySelector("#titleOptionsButton");
 const optionButton = document.querySelector("#optionButton");
 const optionsDialog = document.querySelector("#optionsDialog");
+const volumeInput = document.querySelector("#volumeInput");
 const colorSchemeInputs = document.querySelectorAll("input[name='colorScheme']");
 const resumeButton = document.querySelector("#resumeButton");
 const restartButton = document.querySelector("#restartButton");
@@ -63,6 +64,7 @@ const achievementImages = {
 };
 const achievementStorageKey = "x-line-achievements-v1";
 const colorSchemeStorageKey = "x-line-color-scheme-v1";
+const soundVolumeStorageKey = "x-line-sound-volume-v1";
 const playDayAchievementTiers = [1, 3, 7, 15, 30, 60, 77, 100];
 const modePlayAchievementTiers = [1, 3, 5, 10, 20, 30, 40, 50];
 const totalLineAchievementTiers = [1, 10, 25, 50, 100, 250, 500, 1000, 2000, 3000, 5000, 7500, 9999];
@@ -155,6 +157,9 @@ const colorSchemes = {
 
 let currentColorSchemeKey = loadColorSchemeKey();
 let colors = colorSchemes[currentColorSchemeKey].colors;
+let soundVolume = loadSoundVolume();
+let audioContext = null;
+let masterGain = null;
 
 const shapes = {
   I: [[1, 1, 1, 1]],
@@ -384,6 +389,147 @@ function applyColorScheme(key, save = true) {
   }
 
   draw(0);
+}
+
+function loadSoundVolume() {
+  try {
+    const saved = Number(localStorage.getItem(soundVolumeStorageKey));
+    return Number.isFinite(saved) ? Math.max(0, Math.min(1, saved)) : 0.6;
+  } catch {
+    return 0.6;
+  }
+}
+
+function saveSoundVolume() {
+  try {
+    localStorage.setItem(soundVolumeStorageKey, String(soundVolume));
+  } catch {
+    // Sound still works for this session if storage is unavailable.
+  }
+}
+
+function applySoundVolume(value, save = true) {
+  soundVolume = Math.max(0, Math.min(1, value));
+  volumeInput.value = String(Math.round(soundVolume * 100));
+  if (masterGain) masterGain.gain.setTargetAtTime(soundVolume, audioContext.currentTime, 0.01);
+  if (save) saveSoundVolume();
+}
+
+function ensureAudio() {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass || soundVolume <= 0) return null;
+
+  if (!audioContext) {
+    audioContext = new AudioContextClass();
+    masterGain = audioContext.createGain();
+    masterGain.gain.value = soundVolume;
+    masterGain.connect(audioContext.destination);
+  }
+
+  if (audioContext.state === "suspended") audioContext.resume();
+  return audioContext;
+}
+
+function playTone(frequency, duration = 0.08, options = {}) {
+  const context = ensureAudio();
+  if (!context) return;
+
+  const now = context.currentTime;
+  const osc = context.createOscillator();
+  const gain = context.createGain();
+  const volume = options.volume ?? 0.22;
+  const attack = options.attack ?? 0.004;
+  const release = options.release ?? 0.04;
+
+  osc.type = options.type || "square";
+  osc.frequency.setValueAtTime(frequency, now);
+  if (options.to) osc.frequency.exponentialRampToValueAtTime(Math.max(20, options.to), now + duration);
+
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(volume, now + attack);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + duration + release);
+
+  osc.connect(gain);
+  gain.connect(masterGain);
+  osc.start(now);
+  osc.stop(now + duration + release + 0.02);
+}
+
+function playNoise(duration = 0.14, options = {}) {
+  const context = ensureAudio();
+  if (!context) return;
+
+  const length = Math.max(1, Math.floor(context.sampleRate * duration));
+  const buffer = context.createBuffer(1, length, context.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < length; i += 1) {
+    const fade = 1 - i / length;
+    data[i] = (Math.random() * 2 - 1) * fade;
+  }
+
+  const source = context.createBufferSource();
+  const filter = context.createBiquadFilter();
+  const gain = context.createGain();
+  const now = context.currentTime;
+
+  source.buffer = buffer;
+  filter.type = options.filterType || "lowpass";
+  filter.frequency.value = options.frequency || 900;
+  gain.gain.setValueAtTime(options.volume ?? 0.18, now);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+  source.connect(filter);
+  filter.connect(gain);
+  gain.connect(masterGain);
+  source.start(now);
+}
+
+function playSound(name) {
+  switch (name) {
+    case "move":
+      playTone(260, 0.035, { type: "square", volume: 0.06, to: 220 });
+      break;
+    case "rotate":
+      playTone(430, 0.045, { type: "triangle", volume: 0.08, to: 560 });
+      break;
+    case "hold":
+      playTone(360, 0.05, { type: "triangle", volume: 0.08, to: 260 });
+      break;
+    case "hardDrop":
+      playTone(120, 0.06, { type: "square", volume: 0.1, to: 70 });
+      break;
+    case "lock":
+      playNoise(0.055, { volume: 0.07, frequency: 520 });
+      break;
+    case "lineClear":
+      playTone(520, 0.075, { type: "triangle", volume: 0.11, to: 920 });
+      window.setTimeout(() => playTone(760, 0.07, { type: "triangle", volume: 0.08, to: 1120 }), 42);
+      break;
+    case "blast":
+      playNoise(0.2, { volume: 0.22, frequency: 620 });
+      playTone(90, 0.18, { type: "sawtooth", volume: 0.12, to: 44 });
+      break;
+    case "bomb":
+      playNoise(0.24, { volume: 0.28, frequency: 420 });
+      playTone(70, 0.2, { type: "sawtooth", volume: 0.14, to: 36 });
+      break;
+    case "achievement":
+      [660, 880, 1175].forEach((frequency, index) => {
+        window.setTimeout(() => playTone(frequency, 0.075, { type: "triangle", volume: 0.1 }), index * 62);
+      });
+      break;
+    case "clear":
+      [523, 659, 784, 1047].forEach((frequency, index) => {
+        window.setTimeout(() => playTone(frequency, 0.11, { type: "triangle", volume: 0.11 }), index * 80);
+      });
+      break;
+    case "gameOver":
+      playTone(220, 0.13, { type: "triangle", volume: 0.11, to: 160 });
+      window.setTimeout(() => playTone(150, 0.2, { type: "triangle", volume: 0.1, to: 90 }), 110);
+      break;
+    default:
+      break;
+  }
 }
 
 function buildAchievements() {
@@ -679,6 +825,7 @@ function showAchievementBanners() {
   clearAchievementBanners();
 
   if (!pendingAchievementUnlocks.length) return;
+  playSound("achievement");
 
   const visibleUnlocks = pendingAchievementUnlocks.slice(0, 3);
   const hiddenCount = pendingAchievementUnlocks.length - visibleUnlocks.length;
@@ -856,6 +1003,7 @@ function blastBottomRows() {
 function triggerBlastEffect() {
   if (!currentMode().blast) return;
   recordBlastGaugeFill();
+  playSound("blast");
   showBlastGaugeBurst();
   blastCharge = 0;
   updateBlastGauge();
@@ -1114,7 +1262,10 @@ function expandBlastRows(clearedRows) {
     spawnBlastBurst((Math.max(0, bombX) + 0.5) * cell, (row + 0.5) * cell, 112);
   });
 
-  if (bombRows.length) notices.push({ text: "BOMB BLAST", age: 0, duration: 920 });
+  if (bombRows.length) {
+    playSound("bomb");
+    notices.push({ text: "BOMB BLAST", age: 0, duration: 920 });
+  }
   return [...expanded].sort((a, b) => a - b);
 }
 
@@ -1166,6 +1317,7 @@ function awardLineClearBonuses(cleared, wasTSpin) {
 
 function startLineClearDelay(clearedRows, wasTSpin) {
   const rowsToAnimate = expandBlastRows(clearedRows);
+  playSound("lineClear");
   pendingLineClear = {
     age: 0,
     duration: lineClearDelayMs,
@@ -1232,6 +1384,7 @@ function lockPiece() {
   const wasTSpin = piece.tSpin;
   mergePiece();
   spawnLockParticles(landedCells, landedColor);
+  playSound("lock");
   const clearedRows = completedRows();
 
   if (clearedRows.length) {
@@ -1330,6 +1483,7 @@ function rotatePiece(direction) {
         ...candidate,
         tSpin: detectTSpin(candidate),
       };
+      playSound("rotate");
       lockStart = touchingGround() ? performance.now() : 0;
       return;
     }
@@ -1341,6 +1495,7 @@ function movePiece(dx) {
   const candidate = { ...piece, x: piece.x + dx };
   if (!collide(candidate)) {
     piece = { ...candidate, tSpin: false };
+    playSound("move");
     lockStart = touchingGround() ? performance.now() : 0;
   }
 }
@@ -1375,6 +1530,7 @@ function hardDrop() {
   if (dropped) piece.tSpin = false;
   addBlastCharge(dropped * blastHardDropGain);
   scoreLabel.textContent = String(score);
+  playSound("hardDrop");
   lockPiece();
 }
 
@@ -1397,6 +1553,7 @@ function holdPiece() {
 
   holdUsed = true;
   lockStart = 0;
+  playSound("hold");
 
   if (collide(piece)) {
     endGame();
@@ -1422,6 +1579,7 @@ function endGame() {
   if (!gameOver && currentRunLines === 0) {
     recordNoClearGameOver();
   }
+  playSound("gameOver");
   showResult("GAME OVER");
 }
 
@@ -1429,6 +1587,7 @@ function completeGame() {
   score += 5000;
   scoreLabel.textContent = String(score);
   notices.push({ text: "CLEAR", age: 0, duration: 1200 });
+  playSound("clear");
   showResult("CLEAR");
 }
 
@@ -1807,6 +1966,10 @@ colorSchemeInputs.forEach((input) => {
   });
 });
 
+volumeInput.addEventListener("input", () => {
+  applySoundVolume(Number(volumeInput.value) / 100);
+});
+
 restartButton.addEventListener("click", () => {
   beginGame(currentModeKey);
   optionsDialog.close();
@@ -1919,6 +2082,9 @@ document.addEventListener(
   { passive: false },
 );
 
+document.addEventListener("pointerdown", () => ensureAudio(), { passive: true });
+window.addEventListener("keydown", () => ensureAudio());
+
 if ("serviceWorker" in navigator) {
   let refreshingForUpdate = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
@@ -1935,5 +2101,6 @@ if ("serviceWorker" in navigator) {
 resetGame("endless");
 paused = true;
 updateColorSchemeInputs();
+applySoundVolume(soundVolume, false);
 renderAchievements();
 requestAnimationFrame(update);
