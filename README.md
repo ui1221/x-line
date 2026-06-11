@@ -19,6 +19,12 @@ node dev-server.mjs
 - `sw.js`: オフライン起動用のService Worker。
 - `dev-server.mjs`: 依存なしの開発用ローカルサーバー。
 
+## 関連ドキュメント
+
+- `GAME_DESIGN.md`: モード、操作、速度、Blast、Clean Upなどのゲーム仕様。
+- `ACHIEVEMENTS.md`: 実績一覧、カウント条件、保存データ。
+- `RELEASE_CHECKLIST.md`: 更新前後の確認手順、PWA/スマホ確認項目。
+
 ## 参考データを読ませるなら
 
 まずは、参考にしたいゲームのスクリーンショット、動画、メモ、仕様らしきテキストを `references/` フォルダに入れるのが扱いやすいです。
