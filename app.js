@@ -342,6 +342,7 @@ let pendingEntryDelay = null;
 let pendingCleanupRise = null;
 let pendingSpawnInput = { hold: false, rotate: 0 };
 let touchState = null;
+let lastGameTouchEnd = 0;
 let blastCharge = 0;
 let blastBursts = [];
 let currentRunLines = 0;
@@ -2112,6 +2113,34 @@ gameStage.addEventListener("pointercancel", () => {
   softDropActive = false;
   touchState = null;
 });
+
+gameStage.addEventListener(
+  "touchend",
+  (event) => {
+    const now = Date.now();
+    if (now - lastGameTouchEnd < 420) {
+      event.preventDefault();
+    }
+    lastGameTouchEnd = now;
+  },
+  { passive: false },
+);
+
+gameStage.addEventListener(
+  "dblclick",
+  (event) => {
+    event.preventDefault();
+  },
+  { passive: false },
+);
+
+window.addEventListener(
+  "gesturestart",
+  (event) => {
+    if (gameScreen.classList.contains("is-active")) event.preventDefault();
+  },
+  { passive: false },
+);
 
 window.addEventListener("keydown", (event) => {
   if (paused || gameOver) return;
